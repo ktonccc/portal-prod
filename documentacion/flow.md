@@ -6,9 +6,10 @@ La integración Flow permite que un cliente pague las deudas seleccionadas en el
 Documentación oficial: <https://developers.flow.cl/api#section/Introduccion/Realizar-pruebas-en-nuestro-ambiente-Sandbox>
 
 ## Archivos relevantes
-- `app/Config/flow_credentials.php`: credenciales y ambiente por defecto. También pueden sobreescribirse vía variables de entorno.
+- `app/Config/flow_credentials.php`: define el ambiente activo (por defecto sandbox) y las credenciales por empresa. También pueden sobreescribirse vía variables de entorno.
 - `app/Config/app.php`: carga la configuración Flow (URLs, callbacks, defaults).
 - `app/Services/FlowPaymentService.php`: firma parámetros con HMAC-SHA256, consume `/payment/create` y `/payment/getStatus`.
+- `app/Services/FlowConfigResolver.php`: combina la configuración base con el perfil correspondiente al `idempresa` seleccionado.
 - `pay_flow.php`: valida deudas mientras prepara la orden y redirige al cliente.
 - `flow_confirm.php`: endpoint que Flow invoca por POST con el `token` para confirmar el estado.
 - `flow_return.php`: consulta el estado del pago usando el `token` y muestra el resultado al cliente.
@@ -48,7 +49,7 @@ sequenceDiagram
 ```
 
 ## Detalles operativos
-1. **Inicialización**: `pay_flow.php` carga la configuración (`config_value('flow')`) y crea la orden con `FlowPaymentService::createPayment`. Si la API responde correctamente, persiste datos en `$_SESSION['flow']['last_transaction']`.
+1. **Inicialización**: `pay_flow.php` carga la configuración (`config_value('flow')`), resuelve el perfil según el `idempresa` con `FlowConfigResolver` y crea la orden con `FlowPaymentService::createPayment`. Si la API responde correctamente, persiste datos en `$_SESSION['flow']['last_transaction']`.
 2. **Redirección**: se forma la URL final `response['url'] . '?token=' . response['token']` y se redirige al cliente automáticamente.
 3. **Callback**: `flow_confirm.php` exige método POST y el parámetro `token`. Consulta `getPaymentStatus` y registra la respuesta. Aquí es el punto sugerido para integrar procesos internos (marcar deudas como pagadas, enviar correos, etc.).
 4. **Retorno del cliente**: `flow_return.php` llama nuevamente a `getPaymentStatus` usando el token recibido en la URL. Dependiendo de `status`, muestra mensajes personalizados y un resumen.
@@ -61,6 +62,9 @@ sequenceDiagram
 - Mantén protegidos `flow_credentials.php` y las variables de entorno; el `.gitignore` evita que se suban a control de versiones.
 - Para pruebas usa el ambiente `sandbox`; en `flow_credentials.php` se puede cambiar el valor `environment` o definir `FLOW_ENVIRONMENT`. Si sandbox no está disponible, cambia el valor a `production` para apuntar a `https://www.flow.cl/api`.
 - Puedes revisar respuestas recientes desde el navegador visitando `flow_debug.php`, que muestra la última transacción en sesión y las últimas líneas de los logs (`flow.log`, `flow-callback.log`, `flow-return.log`, etc.). Sólo úsalo en ambientes controlados.
+- Cada pago sólo puede incluir deudas de una misma empresa (`idempresa`). `pay_flow.php` valida este punto y mostrará un error si se combinan empresas distintas.
+- `app/Config/flow_credentials.php` sólo tiene llaves sandbox en el perfil compartido. Las llaves de producción se definen por empresa dentro de `companies` (Padre Las Casas `764430824`, Villarrica `765316081/85`, Gorbea `76734662K`). Si una empresa no declara llaves para el ambiente actual, la solicitud fallará, evitando que se usen credenciales equivocadas.
+- Para habilitar una nueva empresa basta con agregar su `company_id` al arreglo `companies` junto a las credenciales correspondientes. Las empresas existentes en Zumpago ya están creadas para Flow; sólo hay que completar sus llaves cuando Flow las entregue.
 - Credenciales de tarjeta de prueba (Chile):
   - Número: `4051885600446623`
   - Mes/Año: cualquiera

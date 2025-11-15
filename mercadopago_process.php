@@ -88,7 +88,7 @@ if ($status === 'approved') {
 
         $endpointOverrides = [
             '764430824' => $ingresarPagoWsdl,
-            '765316085' => $villarricaWsdl,
+            '765316081' => $villarricaWsdl,
             '76734662K' => $gorbeaWsdl,
         ];
 
