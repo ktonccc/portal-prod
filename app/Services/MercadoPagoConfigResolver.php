@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-class FlowConfigResolver
+class MercadoPagoConfigResolver
 {
     /** @var array<string, mixed> */
     private array $sharedConfig = [];
@@ -91,7 +91,7 @@ class FlowConfigResolver
         $label = trim((string) ($merged['label'] ?? ''));
 
         $merged['company_id'] = $companyId;
-        $merged['label'] = $label !== '' ? $label : ($companyId !== '' ? $companyId : 'Flow');
+        $merged['label'] = $label !== '' ? $label : ($companyId !== '' ? $companyId : 'MercadoPago');
 
         return $merged;
     }

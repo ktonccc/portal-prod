@@ -38,18 +38,18 @@ if (!function_exists('format_debt_period')) {
     function format_debt_period(mixed $month, mixed $year): string
     {
         $monthNames = [
-            1 => 'enero',
-            2 => 'febrero',
-            3 => 'marzo',
-            4 => 'abril',
-            5 => 'mayo',
-            6 => 'junio',
-            7 => 'julio',
-            8 => 'agosto',
-            9 => 'septiembre',
-            10 => 'octubre',
-            11 => 'noviembre',
-            12 => 'diciembre',
+            1 => 'Enero',
+            2 => 'Febrero',
+            3 => 'Marzo',
+            4 => 'Abril',
+            5 => 'Mayo',
+            6 => 'Junio',
+            7 => 'Julio',
+            8 => 'Agosto',
+            9 => 'Septiembre',
+            10 => 'Octubre',
+            11 => 'Noviembre',
+            12 => 'Diciembre',
         ];
 
         $monthClean = trim((string) ($month ?? ''));
@@ -67,7 +67,7 @@ if (!function_exists('format_debt_period')) {
         $yearDigits = is_string($yearDigits) ? $yearDigits : '';
         $yearLabel = '';
         if ($yearDigits !== '') {
-            $yearLabel = substr($yearDigits, -2);
+            $yearLabel = substr($yearDigits, -0);
         }
 
         if ($monthLabel !== '' && $yearLabel !== '') {
@@ -192,7 +192,7 @@ if ($customerName === null && isset($service) && method_exists($service, 'getLas
 
 $paymentAvailability = resolve_payment_availability($debts);
 
-$pageTitle = 'Selecciona la deuda a pagar';
+$pageTitle = 'Seleccione la deuda a pagar';
 $bodyClass = 'hnet';
 
 view('layout/header', compact('pageTitle', 'bodyClass'));
@@ -213,7 +213,7 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
             <?php
                 $noDebtMessage = $customerName !== null
                     ? sprintf('Cliente %s no mantiene deudas vigentes.', $customerName)
-                    : 'El cliente consultado no mantiene deudas vigentes.';
+                    : 'El RUT consultado no mantiene deudas vigentes.';
             ?>
             <div class="card shadow-sm border-0 my-4">
                 <div class="card-body text-center py-5">
@@ -222,7 +222,7 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
                     </div>
                     <p class="text-muted mb-1 text-uppercase small">Estado de cuenta</p>
                     <h3 class="h4 mb-3"><?= h($noDebtMessage); ?></h3>
-                    <p class="mb-0 text-secondary">Gracias por mantenerse al día. Si necesita revisar otra cuenta puede volver e ingresar un nuevo RUT.</p>
+                    <p class="mb-0 text-secondary">Gracias por mantenerse al día.</p>
                 </div>
             </div>
         <?php elseif (!empty($errors)): ?>
@@ -257,15 +257,15 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
                     });
                 </script>
             <?php endif; ?>
-            <!-- Tabla que permite seleccionar una o varias deudas para Webpay. -->
+            <!-- Tabla que permite seleccionar una o varias deudas -->
             <form class="debt-selection-form js-debt-form" method="POST" action="pay.php" novalidate>
                 <input type="hidden" name="rut" value="<?= h($normalizedRut); ?>">
-                <p class="debt-summary-heading js-debt-summary">Selecciona una o más deudas.</p>
+                <p class="debt-summary-heading js-debt-summary">Seleccione una o más deudas</p>
                 <div class="table-responsive debt-table-wrapper">
                     <table class="table table-striped table-hover align-middle debt-table">
                         <thead class="thead-light">
                         <tr>
-                            <th scope="col" class="text-center">Seleccionar</th>
+                            <th scope="col" class="text-center">Pagar</th>
                             <th scope="col">Contrato</th>
                             <th scope="col">Dirección</th>
                             <th scope="col">Servicio</th>
@@ -313,7 +313,7 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
                 <div class="row gy-3 mb-3">
                     <div class="col-md-6 mx-auto">
                         <div class="form-group text-center">
-                            <label for="debt-email" class="form-label">Ingrese email para enviar su comprobante</label>
+                            <label for="debt-email" class="form-label">Ingrese un email para enviar su comprobante</label>
                             <input
                                 type="email"
                                 class="form-control js-debt-email"

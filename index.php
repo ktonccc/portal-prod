@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/app/bootstrap.php';
 
-$pageTitle = 'Portal de Pagos HomeNet';
+$pageTitle = 'Portal de Pagos Test HomeNet';
 $bodyClass = 'hnet';
 
 $errors = [];
@@ -40,8 +40,8 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
 ?>
     <section class="landing-hero">
         <div class="landing-heading">
-            <h1>BIENVENIDOS AL PAGO DE CUENTAS</h1>
-            <p class="landing-subtitle">Ingresa un RUT</p>
+            <h1>Portal de Pagos</h1>
+            <p class="landing-subtitle">Ingrese un R.U.T.</p>
         </div>
 
         <div class="landing-form-card">
@@ -57,15 +57,14 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
             <form class="rut-form js-rut-form" method="POST" action="" novalidate>
                 <div class="rut-form-top">
                     <div class="form-group">
-                        <label for="rut" class="rut-label">R.U.T</label>
                         <input
                             type="text"
                             id="rut"
                             name="rut"
                             value="<?= h($rutInput); ?>"
                             class="form-control js-rut rut-field"
-                            maxlength="12"
-                            placeholder=""
+                            maxlength="9"
+                            placeholder="Ej: 12345678K"
                             required
                             autocomplete="off"
                             autocapitalize="characters"

@@ -53,7 +53,7 @@ return [
             }
         }
 
-        $environmentValue = (string) ($credentials['environment'] ?? (getenv('FLOW_ENVIRONMENT') ?: 'sandbox'));
+        $environmentValue = (string) ($credentials['environment'] ?? (getenv('FLOW_ENVIRONMENT') ?: 'production'));
         $environmentKey = strtolower($environmentValue);
 
         $selectValue = static function (mixed $value) use ($environmentKey, $environmentValue): string {
@@ -325,6 +325,58 @@ return [
             'pending' => trim((string) ($returnUrls['pending'] ?? 'https://pagos2.homenet.cl/mercadopago_return.php')),
         ];
 
-        return $defaults;
+        $sharedConfig = $defaults;
+        $normalizeCompanyId = static function (mixed $value): string {
+            $value = trim((string) $value);
+            if ($value === '') {
+                return '';
+            }
+
+            $normalized = preg_replace('/[^0-9K]/i', '', $value);
+
+            return strtoupper($normalized ?? '');
+        };
+
+        $rawCompanies = (array) ($sharedConfig['companies'] ?? []);
+        $defaultCompanyId = $normalizeCompanyId($sharedConfig['default_company_id'] ?? null);
+
+        unset($sharedConfig['companies'], $sharedConfig['default_company_id']);
+
+        $companies = [];
+        foreach ($rawCompanies as $key => $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+
+            $companyId = $normalizeCompanyId($profile['company_id'] ?? $profile['idempresa'] ?? $key);
+            if ($companyId === '') {
+                continue;
+            }
+
+            $profileData = $profile;
+            if (isset($profileData['credentials']) && is_array($profileData['credentials']) && !empty($profileData['credentials'])) {
+                $credentialsByEnv = $profileData['credentials'];
+                $selectedCredentials = $credentialsByEnv[$environmentValue]
+                    ?? $credentialsByEnv['production']
+                    ?? $credentialsByEnv[array_key_first($credentialsByEnv)] ?? null;
+
+                if (is_array($selectedCredentials)) {
+                    $profileData = array_replace_recursive($profileData, $selectedCredentials);
+                }
+
+                unset($profileData['credentials']);
+            }
+
+            $label = trim((string) ($profileData['label'] ?? ''));
+            $profileData['company_id'] = $companyId;
+            $profileData['label'] = $label !== '' ? $label : $companyId;
+
+            $companies[$companyId] = array_replace($sharedConfig, $profileData);
+        }
+
+        $sharedConfig['default_company_id'] = $defaultCompanyId !== '' ? $defaultCompanyId : null;
+        $sharedConfig['companies'] = $companies;
+
+        return $sharedConfig;
     })(),
 ];

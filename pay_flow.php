@@ -99,6 +99,22 @@ function buildFlowOptionalPayload(
 }
 
 /**
+ * @param array<string, mixed> $payload
+ * @return array<string, mixed>
+ */
+function filterFlowOptionalPayloadForRequest(array $payload): array
+{
+    $filtered = $payload;
+    foreach (['rut', 'canal', 'idcliente', 'idempresa', 'mes', 'ano', 'monto'] as $key) {
+        if (array_key_exists($key, $filtered)) {
+            unset($filtered[$key]);
+        }
+    }
+
+    return $filtered;
+}
+
+/**
  * @return array{0: ?string, 1: bool}
  */
 function encodeFlowOptionalPayload(array $payload): array
@@ -293,6 +309,16 @@ if (empty($errors)) {
         }
 
         if (empty($errors)) {
+            $flowProfileConfig = $flowConfigResolver?->resolveByCompanyId($selectedCompanyId) ?? $flowConfig;
+            $profileApiKey = trim((string) ($flowProfileConfig['api_key'] ?? ''));
+            $profileSecretKey = trim((string) ($flowProfileConfig['secret_key'] ?? ''));
+
+            if ($profileApiKey === '' || $profileSecretKey === '') {
+                $errors[] = 'La empresa seleccionada no tiene credenciales de Flow configuradas para este ambiente.';
+            }
+        }
+
+        if (empty($errors)) {
             try {
                 $flowProfileConfig = $flowConfigResolver?->resolveByCompanyId($selectedCompanyId) ?? $flowConfig;
                 $flowService = new FlowPaymentService($flowProfileConfig);
@@ -303,23 +329,24 @@ if (empty($errors)) {
                     40
                 );
 
-                $flowSubject = 'Pago de servicios HomeNet';
-                if ($selectedCount > 1) {
-                    $flowSubject = sprintf('Pago de %d servicios HomeNet', $selectedCount);
-                }
-                $optionalPayload = buildFlowOptionalPayload(
-                    $normalizedRut,
-                    $selectedIds,
-                    $selectedDebts,
-                    $selectedCount,
-                    $totalAmount,
-                    $email
-                );
+            $flowSubject = 'Pago de servicios HomeNet';
+            if ($selectedCount > 1) {
+                $flowSubject = sprintf('Pago de %d servicios HomeNet', $selectedCount);
+            }
+            $optionalPayload = buildFlowOptionalPayload(
+                $normalizedRut,
+                $selectedIds,
+                $selectedDebts,
+                $selectedCount,
+                $totalAmount,
+                $email
+            );
+            $optionalPayloadForRequest = filterFlowOptionalPayloadForRequest($optionalPayload);
 
-                [$optionalEncoded, $optionalTruncated] = encodeFlowOptionalPayload($optionalPayload);
-                if ($optionalEncoded === null) {
-                    $optionalPayload['__notice'] = 'Se omitió el optional para cumplir límites de Flow.';
-                }
+            [$optionalEncoded, $optionalTruncated] = encodeFlowOptionalPayload($optionalPayloadForRequest);
+            if ($optionalEncoded === null) {
+                $optionalPayload['__notice'] = 'Se omitió el optional para cumplir límites de Flow.';
+            }
 
                 $flowResponse = $flowService->createPayment([
                     'commerceOrder' => $commerceOrder,
