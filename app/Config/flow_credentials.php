@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'environment' => 'sandbox',
+    'environment' => 'production',
     'api_key' => [
         'sandbox' => '2AFB3F9B-11E4-4848-855A-95F223005L5B',
     ],
