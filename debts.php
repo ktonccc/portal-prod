@@ -212,7 +212,7 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
         <?php if ($noDebtsFound): ?>
             <?php
                 $noDebtMessage = $customerName !== null
-                    ? sprintf('Cliente %s no mantiene deudas vigentes.', $customerName)
+                    ? sprintf('%s no mantienes deudas vigentes.', $customerName)
                     : 'El RUT consultado no mantiene deudas vigentes.';
             ?>
             <div class="card shadow-sm border-0 my-4">
@@ -241,13 +241,13 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
                         try {
                             var payload = JSON.parse(atob('<?= base64_encode(json_encode($debugPayload)); ?>'));
                             if (window.console && console.log) {
-                                console.log('Flow debug – deudas disponibles', {
-                                    registros: payload,
-                                    totalRegistros: Array.isArray(payload) ? payload.length : 0,
-                                });
-                                if (console.table && Array.isArray(payload)) {
-                                    console.table(payload);
-                                }
+                                // console.log('Flow debug – deudas disponibles', {
+                                //     registros: payload,
+                                //     totalRegistros: Array.isArray(payload) ? payload.length : 0,
+                                // });
+                                // if (console.table && Array.isArray(payload)) {
+                                //     console.table(payload);
+                                // }
                             }
                         } catch (error) {
                             if (window.console && console.error) {
