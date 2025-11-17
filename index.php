@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/app/bootstrap.php';
 
-$pageTitle = 'Portal de Pagos Test HomeNet';
+$pageTitle = 'Portal de Pagos HomeNet';
 $bodyClass = 'hnet';
 
 $errors = [];

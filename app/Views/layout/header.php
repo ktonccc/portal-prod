@@ -27,7 +27,7 @@ $bodyClass = isset($bodyClass) ? trim($bodyClass) : 'hnet';
 <body class="<?= h($bodyClass); ?>">
 <header class="site-header">
     <div class="site-header-inner">
-        <a class="site-logo-link" href="https://web2.homenet.cl/">
+        <a class="site-logo-link" href="https://www.homenet.cl/">
             <img src="<?= asset('img/logo2.png'); ?>" alt="HomeNet" class="img-fluid site-logo">
         </a>
         <nav class="site-nav">
