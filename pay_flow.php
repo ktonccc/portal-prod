@@ -50,9 +50,20 @@ function buildFlowOptionalPayload(
             $payload['idempresa'] = $idEmpresa;
         }
 
+        $customerId = trim((string) ($primaryDebt['idcliente'] ?? ''));
         $customerName = trim((string) ($primaryDebt['nombre'] ?? ''));
-        if ($customerName !== '') {
-            $payload['cliente'] = mb_substr($customerName, 0, 80);
+        $customerLabel = '';
+
+        if ($customerId !== '' && $customerName !== '') {
+            $customerLabel = sprintf('%s - %s', $customerId, $customerName);
+        } elseif ($customerId !== '') {
+            $customerLabel = $customerId;
+        } elseif ($customerName !== '') {
+            $customerLabel = $customerName;
+        }
+
+        if ($customerLabel !== '') {
+            $payload['cliente'] = mb_substr($customerLabel, 0, 80);
         }
 
         $service = trim((string) ($primaryDebt['servicio'] ?? $primaryDebt['mes'] ?? ''));

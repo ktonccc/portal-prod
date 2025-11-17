@@ -11,8 +11,8 @@ return [
     ],
     'services' => [
         // Endpoint that returns the debt list for a given customer RUT.
-        'debt_wsdl' => 'http://ws.homenet.cl/Test_HN_2025.php?wsdl',
-        'debt_wsdl_fallback' => 'http://ws.homenet.cl/Test_HN_2025.php?wsdl',
+        'debt_wsdl' => 'http://ws.homenet.cl/HNPagos_251117.php?wsdl',
+        'debt_wsdl_fallback' => 'http://ws.homenet.cl/HNPagos_251117.php?wsdl',
         'debt_cache' => [
             'enabled' => (function () {
                 $value = getenv('DEBT_CACHE_ENABLED');
@@ -29,17 +29,17 @@ return [
         // Endpoint used to log the Webpay transaction result.
         'payment_logger_wsdl' => 'http://ws.homenet.cl/webpay_source.php?wsdl',
         // Endpoint used to registrar pagos confirmados via Flow en el sistema legacy.
-        'ingresar_pago_wsdl' => getenv('FLOW_INGRESAR_PAGO_WSDL') ?: 'http://ws.homenet.cl/Test_HN_2025.php?wsdl',
-        'ingresar_pago_wsdl_villarrica' => getenv('FLOW_INGRESAR_PAGO_WSDL_VILLARRICA') ?: 'http://ws.homenet.cl/Test_HN_2025.php?wsdl',
-        'ingresar_pago_wsdl_gorbea' => getenv('FLOW_INGRESAR_PAGO_WSDL_GORBEA') ?: 'http://ws.homenet.cl/Test_HN_2025.php?wsdl',
+        'ingresar_pago_wsdl' => getenv('FLOW_INGRESAR_PAGO_WSDL') ?: 'http://ws.homenet.cl/HNPagos_251117.php?wsdl',
+        'ingresar_pago_wsdl_villarrica' => getenv('FLOW_INGRESAR_PAGO_WSDL_VILLARRICA') ?: 'http://ws.homenet.cl/HNPagos_251117.php?wsdl',
+        'ingresar_pago_wsdl_gorbea' => getenv('FLOW_INGRESAR_PAGO_WSDL_GORBEA') ?: 'http://ws.homenet.cl/HNPagos_251117.php?wsdl',
     ],
     'webpay' => [
         'commerce_code' => '597035425993',
         'private_key_path' => __DIR__ . '/../../597035425993.key',
         'public_cert_path' => __DIR__ . '/../../597035425993.crt',
         'environment' => 'PRODUCCION',
-        'return_url' => 'https://pagos2.homenet.cl/return.php',
-        'final_url' => 'https://pagos2.homenet.cl/final.php',
+        'return_url' => 'https://pagos.homenet.cl/return.php',
+        'final_url' => 'https://pagos.homenet.cl/final.php',
     ],
     'flow' => (function () {
         $credentialsPath = __DIR__ . '/flow_credentials.php';
@@ -175,8 +175,8 @@ return [
             'currency' => 'CLP',
             'payment_method' => 9,
             'timeout' => 900,
-            'url_confirmation' => 'https://pagos2.homenet.cl/flow_confirm.php',
-            'url_return' => 'https://pagos2.homenet.cl/flow_return.php',
+            'url_confirmation' => 'https://pagos.homenet.cl/flow_confirm.php',
+            'url_return' => 'https://pagos.homenet.cl/flow_return.php',
             'default_company_id' => $defaultCompanyId !== '' ? $defaultCompanyId : null,
             'companies' => $companies,
         ];
@@ -263,9 +263,9 @@ return [
             'notification_url' => $envOverrides['notification_url'],
             'statement_descriptor' => $envOverrides['statement_descriptor'] ?: 'HOMENET',
             'return_urls' => [
-                'success' => $returnOverrides['success'] ?: 'https://pagos2.homenet.cl/mercadopago_return.php',
-                'failure' => $returnOverrides['failure'] ?: 'https://pagos2.homenet.cl/mercadopago_return.php',
-                'pending' => $returnOverrides['pending'] ?: 'https://pagos2.homenet.cl/mercadopago_return.php',
+                'success' => $returnOverrides['success'] ?: 'https://pagos.homenet.cl/mercadopago_return.php',
+                'failure' => $returnOverrides['failure'] ?: 'https://pagos.homenet.cl/mercadopago_return.php',
+                'pending' => $returnOverrides['pending'] ?: 'https://pagos.homenet.cl/mercadopago_return.php',
             ],
             'auto_return' => $envOverrides['auto_return'] ?: 'approved',
             'environment' => $envOverrides['environment'] ?: 'production',
@@ -320,9 +320,9 @@ return [
         }
 
         $defaults['return_urls'] = [
-            'success' => trim((string) ($returnUrls['success'] ?? 'https://pagos2.homenet.cl/mercadopago_return.php')),
-            'failure' => trim((string) ($returnUrls['failure'] ?? 'https://pagos2.homenet.cl/mercadopago_return.php')),
-            'pending' => trim((string) ($returnUrls['pending'] ?? 'https://pagos2.homenet.cl/mercadopago_return.php')),
+            'success' => trim((string) ($returnUrls['success'] ?? 'https://pagos.homenet.cl/mercadopago_return.php')),
+            'failure' => trim((string) ($returnUrls['failure'] ?? 'https://pagos.homenet.cl/mercadopago_return.php')),
+            'pending' => trim((string) ($returnUrls['pending'] ?? 'https://pagos.homenet.cl/mercadopago_return.php')),
         ];
 
         $sharedConfig = $defaults;

@@ -19,10 +19,63 @@ $statusData = null;
 $statusCode = 0;
 $lastTransaction = $_SESSION['flow']['last_transaction'] ?? null;
 $transactionRecord = null;
+$tokenSource = 'request';
+$missingTokenLogPath = __DIR__ . '/app/logs/flow-return-missing-token.log';
+$logMissingToken = static function (array $payload) use ($missingTokenLogPath): void {
+    $logMessage = sprintf(
+        "[%s] [Flow][return-missing-token] %s%s",
+        date('Y-m-d H:i:s'),
+        json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        PHP_EOL
+    );
+
+    $logDir = dirname($missingTokenLogPath);
+    $canWrite = (file_exists($missingTokenLogPath) && is_writable($missingTokenLogPath))
+        || (!file_exists($missingTokenLogPath) && is_writable($logDir));
+
+    if ($canWrite) {
+        error_log($logMessage, 3, $missingTokenLogPath);
+    } else {
+        error_log($logMessage);
+    }
+};
 
 if ($token === '') {
-    $errors[] = 'No se recibió el token de Flow para validar la transacción.';
-} else {
+    $sessionToken = is_array($lastTransaction)
+        ? trim((string) ($lastTransaction['token'] ?? ''))
+        : '';
+
+    if ($sessionToken !== '') {
+        $token = $sessionToken;
+        $tokenSource = 'session';
+        $logMissingToken([
+            'received_at' => gmdate('c'),
+            'reason' => 'request_without_token_fallback_used',
+            'payload' => [
+                'get' => $_GET,
+                'post' => $_POST,
+            ],
+            'token' => $token,
+            'last_transaction_summary' => [
+                'rut' => is_array($lastTransaction) ? ($lastTransaction['rut'] ?? null) : null,
+                'idcliente' => is_array($lastTransaction) ? ($lastTransaction['idcliente'] ?? null) : null,
+                'commerce_order' => is_array($lastTransaction) ? ($lastTransaction['commerce_order'] ?? null) : null,
+            ],
+        ]);
+    } else {
+        $logMissingToken([
+            'received_at' => gmdate('c'),
+            'reason' => 'request_without_token',
+            'payload' => [
+                'get' => $_GET,
+                'post' => $_POST,
+            ],
+        ]);
+        $errors[] = 'No se recibió el token de Flow para validar la transacción.';
+    }
+}
+
+if ($token !== '') {
     try {
         $flowConfig = (array) config_value('flow', []);
         $configResolver = new FlowConfigResolver($flowConfig);
@@ -96,6 +149,7 @@ if ($token === '') {
                 'post' => $_POST,
             ],
             'status' => $statusData,
+            'token_source' => $tokenSource,
         ];
         $logMessage = sprintf(
             "[%s] [Flow][return] %s%s",
@@ -364,7 +418,7 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
             <?php endif; ?>
 
             <div class="text-center mt-4">
-                <a href="https://web2.homenet.cl/" class="btn btn-primary">Volver a HomeNet</a>
+                <a href="https://www.homenet.cl/" class="btn btn-primary">Volver a HomeNet</a>
                 <a href="index.php" class="btn btn-outline-secondary ml-2">Realizar otro pago</a>
             </div>
         </div>

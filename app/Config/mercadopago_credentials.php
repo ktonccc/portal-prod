@@ -24,9 +24,9 @@ return [
     'statement_descriptor' => 'HOMENET',
     'notification_url' => 'https://pagos2.homenet.cl/mercadopago_process.php',
     'return_urls' => [
-        'success' => 'https://pagos2.homenet.cl/mercadopago_return.php',
-        'failure' => 'https://pagos2.homenet.cl/mercadopago_return.php',
-        'pending' => 'https://pagos2.homenet.cl/mercadopago_return.php',
+        'success' => 'https://pagos.homenet.cl/mercadopago_return.php',
+        'failure' => 'https://pagos.homenet.cl/mercadopago_return.php',
+        'pending' => 'https://pagos.homenet.cl/mercadopago_return.php',
     ],
     'companies' => [
         '764430824' => [

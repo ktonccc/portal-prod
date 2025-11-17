@@ -22,6 +22,12 @@ return [
         ],
         '765316081' => [
             'label' => 'Villarrica',
+            'credentials' => [
+                'production' => [
+                    'api_key' => '2EFE40AB-3D80-4B1F-872C-56B14L34AFB4',
+                    'secret_key' => 'c1a990e0e79d1e01f693b4338ac56f3efdb7ab8f',
+                ],
+            ], 
         ],
         '76734662K' => [
             'label' => 'Gorbea',
