@@ -196,9 +196,9 @@ return [
             'certification' => 'http://20.157.19.107:8091/BPZumPago/pago.aspx',
         ],
         // Rutas que debemos informar a Zumpago por ambiente.
-        'response_url' => 'https://pagos2.homenet.cl/zumpago/response.php',
-        'notification_url' => 'https://pagos2.homenet.cl/zumpago/notify.php',
-        'cancellation_url' => 'https://pagos2.homenet.cl/zumpago/cancel.php',
+        'response_url' => 'https://pagos.homenet.cl/zumpago/response.php',
+        'notification_url' => 'https://pagos.homenet.cl/zumpago/notify.php',
+        'cancellation_url' => 'https://pagos.homenet.cl/zumpago/cancel.php',
         // Configuración específica por empresa (IdEmpresa).
         'companies' => [
             '765316081' => [
