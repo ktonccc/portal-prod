@@ -329,15 +329,10 @@ class FlowIngresarPagoReporter
     private function resolveChannel(array $status, string $collector): string
     {
         $media = $status['paymentData']['media'] ?? null;
-
-        if (is_string($media)) {
-            $media = trim($media);
-        } else {
-            $media = '';
-        }
+        $media = is_string($media) ? strtoupper(trim($media)) : '';
 
         if ($media !== '') {
-            return $media;
+            return sprintf('%s - %s', $collector, $media);
         }
 
         return $collector;
@@ -345,13 +340,13 @@ class FlowIngresarPagoReporter
 
     private function resolveCollector(): string
     {
-        $configured = trim($this->channel);
+        $configured = strtoupper(trim($this->channel));
 
         if ($configured === '') {
-            return 'Flow';
+            return 'FLOW';
         }
 
-        return ucfirst(strtolower($configured));
+        return $configured;
     }
 
     private function resolveFlowNetAmount(array $status): ?int
