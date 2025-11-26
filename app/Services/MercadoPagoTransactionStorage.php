@@ -8,6 +8,8 @@ use RuntimeException;
 
 class MercadoPagoTransactionStorage
 {
+    private const PROCESSING_TTL_SECONDS = 600;
+
     public function __construct(
         private readonly string $directory
     ) {
@@ -20,20 +22,8 @@ class MercadoPagoTransactionStorage
     {
         $data['transaction_id'] = $transactionId;
 
-        if (!isset($data['ingresar_pago']) || !is_array($data['ingresar_pago'])) {
-            $data['ingresar_pago'] = [
-                'processed' => false,
-                'attempts' => [],
-            ];
-        }
-
-        if (!isset($data['mercadopago']) || !is_array($data['mercadopago'])) {
-            $data['mercadopago'] = [];
-        }
-
-        if (!isset($data['mercadopago']['responses']) || !is_array($data['mercadopago']['responses'])) {
-            $data['mercadopago']['responses'] = [];
-        }
+        $data['ingresar_pago'] = $this->normalizeIngresarPagoMeta($data['ingresar_pago'] ?? null);
+        $data['mercadopago'] = $this->normalizeMercadoPagoMeta($data['mercadopago'] ?? null);
 
         $this->writeFile($transactionId, $data);
     }
@@ -87,23 +77,12 @@ class MercadoPagoTransactionStorage
             $record = [
                 'transaction_id' => $transactionId,
                 'created_at' => time(),
-                'ingresar_pago' => [
-                    'processed' => false,
-                    'attempts' => [],
-                ],
-                'mercadopago' => [
-                    'responses' => [],
-                ],
+                'ingresar_pago' => $this->normalizeIngresarPagoMeta(null),
+                'mercadopago' => $this->normalizeMercadoPagoMeta(null),
             ];
         }
 
-        if (!isset($record['mercadopago']) || !is_array($record['mercadopago'])) {
-            $record['mercadopago'] = [];
-        }
-
-        if (!isset($record['mercadopago']['responses']) || !is_array($record['mercadopago']['responses'])) {
-            $record['mercadopago']['responses'] = [];
-        }
+        $record['mercadopago'] = $this->normalizeMercadoPagoMeta($record['mercadopago']);
 
         $record['mercadopago']['responses'][] = $response;
         $this->writeFile($transactionId, $record);
@@ -111,22 +90,81 @@ class MercadoPagoTransactionStorage
         return $record;
     }
 
+    public function startIngresarPagoProcessing(string $transactionId): bool
+    {
+        return $this->withIngresarPagoLock($transactionId, function () use ($transactionId) {
+            $record = $this->get($transactionId);
+            if ($record === null) {
+                return false;
+            }
+
+            $meta = $this->normalizeIngresarPagoMeta($record['ingresar_pago'] ?? null);
+
+            if (!empty($meta['processed'])) {
+                return false;
+            }
+
+            if (!empty($meta['processing'])) {
+                $startedAt = (int) ($meta['processing_started_at'] ?? 0);
+                if ($startedAt > 0 && (time() - $startedAt) <= self::PROCESSING_TTL_SECONDS) {
+                    return false;
+                }
+            }
+
+            $meta['processing'] = true;
+            $meta['processing_started_at'] = time();
+            $record['ingresar_pago'] = $meta;
+            $this->writeFile($transactionId, $record);
+
+            return true;
+        });
+    }
+
+    public function resetIngresarPagoProcessing(string $transactionId): void
+    {
+        $this->withIngresarPagoLock($transactionId, function () use ($transactionId) {
+            $record = $this->get($transactionId);
+            if ($record === null) {
+                return;
+            }
+
+            $meta = $this->normalizeIngresarPagoMeta($record['ingresar_pago'] ?? null);
+            $meta['processing'] = false;
+            unset($meta['processing_started_at']);
+            $record['ingresar_pago'] = $meta;
+            $this->writeFile($transactionId, $record);
+        });
+    }
+
     /**
      * @param array<string, mixed> $meta
      */
     public function markProcessed(string $transactionId, array $meta): void
     {
-        $result = $this->merge($transactionId, [
-            'ingresar_pago' => $this->recursiveMerge(
-                [
-                    'processed' => true,
-                    'processed_at' => time(),
-                ],
-                $meta
-            ),
-        ]);
+        $updated = $this->withIngresarPagoLock($transactionId, function () use ($transactionId, $meta) {
+            $record = $this->get($transactionId);
+            if ($record === null) {
+                return null;
+            }
 
-        if ($result === null) {
+            $ingresarMeta = $this->normalizeIngresarPagoMeta($record['ingresar_pago'] ?? null);
+            $ingresarMeta = $this->recursiveMerge($ingresarMeta, $meta);
+            $ingresarMeta = $this->recursiveMerge($ingresarMeta, [
+                'processed' => true,
+                'processed_at' => time(),
+                'processing' => false,
+                'processing_finished_at' => time(),
+            ]);
+
+            unset($ingresarMeta['processing_started_at']);
+
+            $record['ingresar_pago'] = $ingresarMeta;
+            $this->writeFile($transactionId, $record);
+
+            return $record;
+        });
+
+        if ($updated === null) {
             throw new RuntimeException("No se encontró la transacción Mercado Pago asociada al ID {$transactionId} para marcarla como procesada.");
         }
     }
@@ -189,5 +227,76 @@ class MercadoPagoTransactionStorage
         $hash = hash('sha256', $transactionId);
 
         return rtrim($this->directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $hash . '.json';
+    }
+
+    /**
+     * @param array<string, mixed>|null $meta
+     * @return array<string, mixed>
+     */
+    private function normalizeIngresarPagoMeta(mixed $meta): array
+    {
+        if (!is_array($meta)) {
+            $meta = [];
+        }
+
+        if (!isset($meta['processed'])) {
+            $meta['processed'] = false;
+        }
+
+        if (!isset($meta['processing'])) {
+            $meta['processing'] = false;
+        }
+
+        if (!isset($meta['attempts']) || !is_array($meta['attempts'])) {
+            $meta['attempts'] = [];
+        }
+
+        if (!isset($meta['responses']) || !is_array($meta['responses'])) {
+            $meta['responses'] = [];
+        }
+
+        return $meta;
+    }
+
+    /**
+     * @param array<string, mixed>|null $meta
+     * @return array<string, mixed>
+     */
+    private function normalizeMercadoPagoMeta(mixed $meta): array
+    {
+        if (!is_array($meta)) {
+            $meta = [];
+        }
+
+        if (!isset($meta['responses']) || !is_array($meta['responses'])) {
+            $meta['responses'] = [];
+        }
+
+        return $meta;
+    }
+
+    /**
+     * @return mixed
+     */
+    private function withIngresarPagoLock(string $transactionId, callable $callback)
+    {
+        $this->ensureDirectory();
+        $lockPath = $this->pathForId($transactionId) . '.lock';
+        $handle = fopen($lockPath, 'c');
+
+        if ($handle === false) {
+            throw new RuntimeException("No fue posible abrir el candado para la transacción {$transactionId}.");
+        }
+
+        try {
+            if (!flock($handle, LOCK_EX)) {
+                throw new RuntimeException("No fue posible bloquear la transacción {$transactionId} para evitar reprocesos simultáneos.");
+            }
+
+            return $callback();
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
     }
 }

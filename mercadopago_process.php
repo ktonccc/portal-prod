@@ -120,8 +120,8 @@ if ($status === 'approved') {
                 new IngresarPagoService($ingresarPagoWsdl),
                 __DIR__ . '/app/logs/mercadopago-ingresar-pago.log',
                 __DIR__ . '/app/logs/mercadopago-ingresar-pago-error.log',
-                'MPAGO',
-                'MercadoPago',
+                'MERCADOPAGO',
+                'MERCADOPAGO',
                 $endpointOverrides
             );
             $reporter->report($externalReference, $payment);

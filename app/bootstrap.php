@@ -88,3 +88,13 @@ spl_autoload_register(
 
 /** @var array<string, mixed> $config */
 $config = require __DIR__ . '/Config/app.php';
+
+$timezone = (string) ($config['app']['timezone'] ?? '');
+if ($timezone !== '') {
+    try {
+        new DateTimeZone($timezone);
+        date_default_timezone_set($timezone);
+    } catch (Throwable $timezoneException) {
+        error_log(sprintf('[bootstrap][timezone] %s', $timezoneException->getMessage()));
+    }
+}

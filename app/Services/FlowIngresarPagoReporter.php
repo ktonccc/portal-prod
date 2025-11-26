@@ -10,6 +10,11 @@ use Throwable;
 class FlowIngresarPagoReporter
 {
     private const DEFAULT_CHANNEL = 'FLOW';
+    private const MEDIA_LABEL_OVERRIDES = [
+        'TRANSFERENCIAS BANCARIAS VÍA KHIPU' => 'KHIPU',
+        'TRANSFERENCIAS BANCARIAS VIA KHIPU' => 'KHIPU',
+        'TRANSFERENCIAS BANCARIAS V?A KHIPU' => 'KHIPU',
+    ];
     /** @var array<string, IngresarPagoService> */
     private array $serviceCache = [];
 
@@ -329,13 +334,29 @@ class FlowIngresarPagoReporter
     private function resolveChannel(array $status, string $collector): string
     {
         $media = $status['paymentData']['media'] ?? null;
-        $media = is_string($media) ? strtoupper(trim($media)) : '';
+        $media = is_string($media) ? $this->normalizeMedia($media) : '';
 
         if ($media !== '') {
-            return sprintf('%s - %s', $collector, $media);
+            $label = self::MEDIA_LABEL_OVERRIDES[$media] ?? $media;
+            return sprintf('%s - %s', $collector, $label);
         }
 
         return $collector;
+    }
+
+    private function normalizeMedia(string $media): string
+    {
+        $media = trim($media);
+
+        if ($media === '') {
+            return '';
+        }
+
+        if (function_exists('mb_strtoupper')) {
+            return mb_strtoupper($media, 'UTF-8');
+        }
+
+        return strtoupper($media);
     }
 
     private function resolveCollector(): string

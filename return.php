@@ -17,9 +17,31 @@ $message = '';
 $errors = [];
 $formAction = '';
 $tokenWs = '';
+$cancelledMessage = '';
+$cancelledDetails = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token_ws'])) {
-    $tokenWs = trim((string) $_POST['token_ws']);
+$valueFromRequest = static function (string $key): string {
+    foreach ([$_POST, $_GET] as $source) {
+        if (!isset($source[$key])) {
+            continue;
+        }
+
+        $value = $source[$key];
+
+        if (is_string($value) || is_numeric($value)) {
+            return trim((string) $value);
+        }
+    }
+
+    return '';
+};
+
+$tokenWs = $valueFromRequest('token_ws');
+$tbkToken = $valueFromRequest('TBK_TOKEN');
+$tbkOrder = $valueFromRequest('TBK_ORDEN_COMPRA');
+$tbkSessionId = $valueFromRequest('TBK_ID_SESION');
+
+if ($tokenWs !== '') {
 
     try {
         $webpay = new WebpayNormalService((array) config_value('webpay', []));
@@ -65,8 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token_ws'])) {
             } catch (Throwable $e) {
                 // Continuamos el flujo aun cuando no es posible registrar el resultado.
             }
-
-            $webpay->acknowledgeTransaction($tokenWs);
         } else {
             $errors[] = 'El pago fue rechazado por Transbank.';
             if ($responseCode !== null) {
@@ -159,13 +179,131 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token_ws'])) {
     } catch (Throwable $exception) {
         $errors[] = 'Ocurrió un error al obtener el resultado de la transacción.';
     }
+} elseif ($tbkToken !== '') {
+    $cancelledMessage = 'El pago fue cancelado antes de completarse. No se realizó ningún cargo a tu tarjeta.';
+
+    if ($tbkOrder !== '') {
+        $cancelledDetails['Orden de compra'] = $tbkOrder;
+    }
+    if ($tbkSessionId !== '') {
+        $cancelledDetails['ID de sesión'] = $tbkSessionId;
+    }
+
+    $abortResult = null;
+    $abortOutput = null;
+
+    try {
+        $webpay = new WebpayNormalService((array) config_value('webpay', []));
+        $abortResult = $webpay->getTransactionResult($tbkToken);
+        $abortOutput = $abortResult->detailOutput;
+
+        if (is_array($abortOutput)) {
+            $abortOutput = $abortOutput[0] ?? null;
+        }
+    } catch (Throwable $exception) {
+        error_log(
+            sprintf(
+                "[%s] [Webpay][return][abort] %s%s",
+                date('Y-m-d H:i:s'),
+                json_encode([
+                    'message' => 'No fue posible consultar el estado de la transacción abortada.',
+                    'error' => $exception->getMessage(),
+                    'token' => $tbkToken,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                PHP_EOL
+            ),
+            3,
+            __DIR__ . '/app/logs/webpay.log'
+        );
+    }
+
+    $abortResponseCode = null;
+    $abortPaymentType = null;
+    $abortAuthorizationCode = null;
+    $abortSharesNumber = null;
+    $abortAmountValue = null;
+
+    if (is_object($abortOutput)) {
+        $abortResponseCode = isset($abortOutput->responseCode) ? (int) $abortOutput->responseCode : null;
+        $abortPaymentType = isset($abortOutput->paymentTypeCode) ? (string) $abortOutput->paymentTypeCode : null;
+        $abortAuthorizationCode = isset($abortOutput->authorizationCode) ? (string) $abortOutput->authorizationCode : null;
+        $abortSharesNumber = $abortOutput->sharesNumber ?? null;
+        $abortAmountValue = $abortOutput->amount ?? null;
+    }
+
+    $rawAbortResult = $abortResult !== null
+        ? json_decode(json_encode($abortResult, JSON_UNESCAPED_UNICODE), true)
+        : null;
+    $rawAbortOutput = $abortOutput !== null
+        ? json_decode(json_encode($abortOutput, JSON_UNESCAPED_UNICODE), true)
+        : null;
+
+    $abortTransactionDate = $rawAbortResult['transactionDate'] ?? null;
+    $abortCardNumber = $rawAbortResult['cardDetail']['cardNumber'] ?? null;
+    $abortBuyOrder = $rawAbortResult['buyOrder'] ?? ($tbkOrder !== '' ? $tbkOrder : null);
+    $abortSessionId = $rawAbortResult['sessionId'] ?? ($tbkSessionId !== '' ? $tbkSessionId : null);
+
+    try {
+        $storage = new WebpayTransactionStorage(__DIR__ . '/app/storage/webpay');
+        $storage->appendResponse($tbkToken, [
+            'received_at' => time(),
+            'status' => 'aborted',
+            'detail' => [
+                'response_code' => $abortResponseCode,
+                'authorization_code' => $abortAuthorizationCode,
+                'payment_type_code' => $abortPaymentType,
+                'shares_number' => $abortSharesNumber,
+                'amount' => $abortAmountValue,
+                'transaction_date' => $abortTransactionDate,
+                'card_number' => $abortCardNumber,
+                'buy_order' => $abortBuyOrder,
+                'session_id' => $abortSessionId,
+            ],
+            'raw' => [
+                'result' => $rawAbortResult,
+                'detail' => $rawAbortOutput,
+            ],
+            'tbk' => [
+                'token' => $tbkToken,
+                'order' => $tbkOrder !== '' ? $tbkOrder : null,
+                'session_id' => $tbkSessionId !== '' ? $tbkSessionId : null,
+            ],
+        ]);
+    } catch (Throwable $storageException) {
+        error_log(
+            sprintf(
+                "[%s] [Webpay][storage-error] %s%s",
+                date('Y-m-d H:i:s'),
+                json_encode([
+                    'token' => $tbkToken,
+                    'context' => 'return-abort',
+                    'error' => $storageException->getMessage(),
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                PHP_EOL
+            ),
+            3,
+            __DIR__ . '/app/logs/webpay.log'
+        );
+    }
 } else {
     $errors[] = 'No se recibió un token válido para procesar el pago.';
 }
 
 view('layout/header', compact('pageTitle', 'bodyClass'));
 ?>
-    <?php if (!empty($errors)): ?>
+    <?php if ($cancelledMessage !== ''): ?>
+        <div class="alert alert-warning" role="alert">
+            <p class="mb-2"><?= h($cancelledMessage); ?></p>
+            <?php if (!empty($cancelledDetails)): ?>
+                <ul class="mb-0">
+                    <?php foreach ($cancelledDetails as $label => $value): ?>
+                        <li><strong><?= h($label); ?>:</strong> <?= h($value); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <a href="index.php" class="btn btn-outline-primary mt-3">Volver al inicio</a>
+        </div>
+    <?php elseif (!empty($errors)): ?>
         <div class="alert alert-danger" role="alert">
             <p class="mb-2">No fue posible procesar tu pago.</p>
             <ul class="mb-0">

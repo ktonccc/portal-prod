@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'app' => [
         'name' => 'Portal Pagos HomeNet',
+        'timezone' => getenv('APP_TIMEZONE') ?: 'America/Santiago',
     ],
     'recaptcha' => [
         'site_key' => '6LcWTeQUAAAAAJBANqfAeSXoUfawNXwWM8Pas_by',
@@ -186,13 +187,13 @@ return [
         // Configuración por defecto (WAM BP). Se mantiene para compatibilidad.
         'company_code' => '000039',
         'xml_key' => 'Sysasap2014_Zumpago_2014',
-        'verification_key' => '501D5913B4591E81BE611E2E',
+        'verification_key' => '1E363866FAEDC7F0CC7C694C',
         'iv' => '12345678',
-        'payment_methods' => '016',
+        'payment_methods' => '018,024,022,016',
         // production | certification
-        'environment' => 'certification',
+        'environment' => 'production',
         'urls' => [
-            'production' => 'https://www.zumpago.cl/inicio/pagar_cuentas.aspx',
+            'production' => 'https://www.zumpago.cl/BPZumpago/pago.aspx',
             'certification' => 'http://20.157.19.107:8091/BPZumPago/pago.aspx',
         ],
         // Rutas que debemos informar a Zumpago por ambiente.
@@ -205,11 +206,11 @@ return [
                 'label' => 'WAM BP',
                 'company_code' => '000039',
                 'xml_key' => 'Sysasap2014_Zumpago_2014',
-                'verification_key' => '501D5913B4591E81BE611E2E',
+                'verification_key' => '1E363866FAEDC7F0CC7C694C',
                 'iv' => '12345678',
-                'payment_methods' => '016',
+                'payment_methods' => '018,024,022,016',
                 'urls' => [
-                    'production' => 'https://www.zumpago.cl/inicio/pagar_cuentas.aspx',
+                    'production' => 'https://www.zumpago.cl/BPZumpago/pago.aspx',
                     'certification' => 'http://20.157.19.107:8091/BPZumPago/pago.aspx',
                 ],
             ],
@@ -217,11 +218,11 @@ return [
                 'label' => 'FULLNET BP',
                 'company_code' => '000042',
                 'xml_key' => 'Sysasap2014_Zumpago_2014',
-                'verification_key' => '1314FCC1A6ECD7A6EB72B456',
+                'verification_key' => 'B7D125B73E09017181090820',
                 'iv' => '12345678',
-                'payment_methods' => '016',
+                'payment_methods' => '018,024,022,016',
                 'urls' => [
-                    'production' => 'https://www.zumpago.cl/inicio/pagar_cuentas.aspx',
+                    'production' => 'https://www.zumpago.cl/BPZumpago/pago.aspx',
                     'certification' => 'http://20.157.19.107:8091/BPZumPago/pago.aspx',
                 ],
             ],
@@ -229,11 +230,11 @@ return [
                 'label' => 'FRATA BP',
                 'company_code' => '000043',
                 'xml_key' => 'Sysasap2014_Zumpago_2014',
-                'verification_key' => '3C57695858A8BCA514C611DD',
+                'verification_key' => '952594D6A57C6DAEC8B0D3E1',
                 'iv' => '12345678',
-                'payment_methods' => '016',
+                'payment_methods' => '018,024,022,016',
                 'urls' => [
-                    'production' => 'https://www.zumpago.cl/inicio/pagar_cuentas.aspx',
+                    'production' => 'https://www.zumpago.cl/BPZumpago/pago.aspx',
                     'certification' => 'http://20.157.19.107:8091/BPZumPago/pago.aspx',
                 ],
             ],

@@ -52,11 +52,6 @@ class WebpayNormalService
         return $this->transaction->getTransactionResult($token);
     }
 
-    public function acknowledgeTransaction(string $token): void
-    {
-        $this->transaction->acknowledgeTransaction($token);
-    }
-
     private function buildTransaction(array $config): object
     {
         $environment = strtoupper((string) ($config['environment'] ?? ''));

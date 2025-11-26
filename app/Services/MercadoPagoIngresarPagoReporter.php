@@ -10,7 +10,7 @@ use Throwable;
 class MercadoPagoIngresarPagoReporter
 {
     private const DEFAULT_CHANNEL = 'MERCADOPAGO';
-    private const DEFAULT_COLLECTOR = 'MercadoPago';
+    private const DEFAULT_COLLECTOR = 'MERCADOPAGO';
 
     /** @var array<string, IngresarPagoService> */
     private array $serviceCache = [];
@@ -48,39 +48,53 @@ class MercadoPagoIngresarPagoReporter
             return;
         }
 
-        $payloads = $this->buildPayloads($transaction, $payment);
-        if (empty($payloads)) {
-            $this->logError($transactionId, 'No se generaron cargas útiles para IngresarPago.', $payment, $transaction, null, 0);
+        $processingStarted = $this->storage->startIngresarPagoProcessing($transactionId);
+        if ($processingStarted === false) {
             return;
         }
 
-        $responses = [];
-        $callCount = 0;
-
-        foreach ($payloads as $payload) {
-            $callCount++;
-            $targetService = $this->resolveServiceForPayload($payload);
-
-            try {
-                $result = $targetService->submit($payload);
-                $result['wsdl'] = $targetService->getWsdlEndpoint();
-                $responses[] = $result;
-            } catch (Throwable $exception) {
-                $this->logError($transactionId, $exception->getMessage(), $payment, $transaction, $payload, $callCount);
-                throw $exception;
-            }
-        }
+        $processingCompleted = false;
 
         try {
-            $this->storage->markProcessed($transactionId, [
-                'responses' => $responses,
-            ]);
-        } catch (RuntimeException $exception) {
-            $this->logError($transactionId, 'No fue posible actualizar el estado local del pago: ' . $exception->getMessage(), $payment, $transaction, null, $callCount);
-            throw $exception;
-        }
+            $payloads = $this->buildPayloads($transaction, $payment);
+            if (empty($payloads)) {
+                $this->logError($transactionId, 'No se generaron cargas útiles para IngresarPago.', $payment, $transaction, null, 0);
+                return;
+            }
 
-        $this->logSuccess($transactionId, $responses, $payment, $transaction, $callCount);
+            $responses = [];
+            $callCount = 0;
+
+            foreach ($payloads as $payload) {
+                $callCount++;
+                $targetService = $this->resolveServiceForPayload($payload);
+
+                try {
+                    $result = $targetService->submit($payload);
+                    $result['wsdl'] = $targetService->getWsdlEndpoint();
+                    $responses[] = $result;
+                } catch (Throwable $exception) {
+                    $this->logError($transactionId, $exception->getMessage(), $payment, $transaction, $payload, $callCount);
+                    throw $exception;
+                }
+            }
+
+            try {
+                $this->storage->markProcessed($transactionId, [
+                    'responses' => $responses,
+                ]);
+                $processingCompleted = true;
+            } catch (RuntimeException $exception) {
+                $this->logError($transactionId, 'No fue posible actualizar el estado local del pago: ' . $exception->getMessage(), $payment, $transaction, null, $callCount);
+                throw $exception;
+            }
+
+            $this->logSuccess($transactionId, $responses, $payment, $transaction, $callCount);
+        } finally {
+            if (!$processingCompleted) {
+                $this->storage->resetIngresarPagoProcessing($transactionId);
+            }
+        }
     }
 
     /**

@@ -50,22 +50,6 @@ function buildFlowOptionalPayload(
             $payload['idempresa'] = $idEmpresa;
         }
 
-        $customerId = trim((string) ($primaryDebt['idcliente'] ?? ''));
-        $customerName = trim((string) ($primaryDebt['nombre'] ?? ''));
-        $customerLabel = '';
-
-        if ($customerId !== '' && $customerName !== '') {
-            $customerLabel = sprintf('%s - %s', $customerId, $customerName);
-        } elseif ($customerId !== '') {
-            $customerLabel = $customerId;
-        } elseif ($customerName !== '') {
-            $customerLabel = $customerName;
-        }
-
-        if ($customerLabel !== '') {
-            $payload['cliente'] = mb_substr($customerLabel, 0, 80);
-        }
-
         $service = trim((string) ($primaryDebt['servicio'] ?? $primaryDebt['mes'] ?? ''));
         if ($service !== '') {
             if ($selectedCount > 1) {
@@ -107,6 +91,33 @@ function buildFlowOptionalPayload(
     }
 
     return $payload;
+}
+
+/**
+ * @param array<int, array<string, mixed>> $selectedDebts
+ * @return array{0: string, 1: string, 2: string}
+ */
+function resolveFlowCustomerInfo(array $selectedDebts): array
+{
+    $primaryDebt = $selectedDebts[0] ?? null;
+    $customerId = '';
+    $customerName = '';
+
+    if (is_array($primaryDebt)) {
+        $customerId = trim((string) ($primaryDebt['idcliente'] ?? ''));
+        $customerName = trim((string) ($primaryDebt['nombre'] ?? ''));
+    }
+
+    $label = '';
+    if ($customerId !== '' && $customerName !== '') {
+        $label = sprintf('%s - %s', $customerId, $customerName);
+    } elseif ($customerId !== '') {
+        $label = $customerId;
+    } elseif ($customerName !== '') {
+        $label = $customerName;
+    }
+
+    return [$customerId, $customerName, mb_substr($label, 0, 80)];
 }
 
 /**
@@ -340,9 +351,13 @@ if (empty($errors)) {
                     40
                 );
 
-            $flowSubject = 'Pago de servicios HomeNet';
-            if ($selectedCount > 1) {
-                $flowSubject = sprintf('Pago de %d servicios HomeNet', $selectedCount);
+            [$customerIdForSubject, $customerNameForSubject, $customerLabelForSubject] = resolveFlowCustomerInfo($selectedDebts);
+            if ($customerLabelForSubject !== '') {
+                $flowSubject = $customerLabelForSubject;
+            } else {
+                $flowSubject = $selectedCount > 1
+                    ? sprintf('Pago de %d servicios HomeNet', $selectedCount)
+                    : 'Pago de servicios HomeNet';
             }
             $optionalPayload = buildFlowOptionalPayload(
                 $normalizedRut,

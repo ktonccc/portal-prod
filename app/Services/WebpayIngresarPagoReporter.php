@@ -63,8 +63,10 @@ class WebpayIngresarPagoReporter
         }
 
         $results = [];
+        $attemptCount = 0;
 
         foreach ($payloads as $payload) {
+            $attemptCount++;
             $targetService = $this->resolveServiceForPayload($payload);
 
             try {
@@ -79,7 +81,7 @@ class WebpayIngresarPagoReporter
                     // omitimos errores al obtener el envelope
                 }
 
-                $this->logError($token, $exception->getMessage(), $record, $latest, $payload);
+                $this->logError($token, $exception->getMessage(), $record, $latest, $payload, $attemptCount);
                 throw $exception;
             }
         }
@@ -89,11 +91,18 @@ class WebpayIngresarPagoReporter
                 'responses' => $results,
             ]);
         } catch (RuntimeException $exception) {
-            $this->logError($token, 'No fue posible actualizar el estado local después de notificar IngresarPago: ' . $exception->getMessage(), $record, $latest, null);
+            $this->logError(
+                $token,
+                'No fue posible actualizar el estado local después de notificar IngresarPago: ' . $exception->getMessage(),
+                $record,
+                $latest,
+                null,
+                $attemptCount
+            );
             throw $exception;
         }
 
-        $this->logSuccess($token, $payloads, $results, $record, $latest);
+        $this->logSuccess($token, $payloads, $results, $record, $latest, $attemptCount);
     }
 
     /**
@@ -306,19 +315,33 @@ class WebpayIngresarPagoReporter
     }
 
     /**
-     * @param array<int, array<string, mixed>> $payloads
+     * @param array<int, array<string, mixed>> $rawPayloads
      * @param array<int, array<string, mixed>> $results
      * @param array<string, mixed> $record
      * @param array<string, mixed> $response
      */
-    private function logSuccess(string $token, array $payloads, array $results, array $record, array $response): void
+    private function logSuccess(string $token, array $rawPayloads, array $results, array $record, array $response, int $attemptCount): void
     {
+        $payloads = array_column($results, 'payload');
+        $payloadsXml = array_column($results, 'envelope');
+        $responses = array_column($results, 'response');
+        $httpStatuses = array_column($results, 'http_status');
+        $wsdls = array_column($results, 'wsdl');
+
         $entry = [
             'token' => $token,
             'collector' => $this->collector,
+            'attempt_count' => $attemptCount,
+            'payloads_input' => $rawPayloads,
             'payloads' => $payloads,
-            'responses' => $results,
-            'webpay' => $this->sanitizeResponseForLog($response),
+            'payloads_xml' => $payloadsXml,
+            'http_statuses' => $httpStatuses,
+            'responses' => $responses,
+            'wsdls' => $wsdls,
+            'webpay' => [
+                'summary' => $this->sanitizeResponseForLog($response),
+                'raw' => $this->redactWebpayResponse($response),
+            ],
             'transaction' => $this->sanitizeRecordForLog($record),
         ];
 
@@ -330,15 +353,37 @@ class WebpayIngresarPagoReporter
      * @param array<string, mixed>|null $response
      * @param array<string, mixed>|null $payload
      */
-    private function logError(string $token, string $message, ?array $record, ?array $response, ?array $payload): void
+    private function logError(string $token, string $message, ?array $record, ?array $response, ?array $payload, ?int $attemptCount = null): void
     {
+        $payloadForLog = $payload;
+        $payloadEnvelope = null;
+        $targetWsdl = null;
+
+        if (is_array($payloadForLog)) {
+            if (array_key_exists('__envelope', $payloadForLog)) {
+                $payloadEnvelope = $payloadForLog['__envelope'];
+                unset($payloadForLog['__envelope']);
+            }
+
+            if (array_key_exists('__target_wsdl', $payloadForLog)) {
+                $targetWsdl = $payloadForLog['__target_wsdl'];
+                unset($payloadForLog['__target_wsdl']);
+            }
+        }
+
         $entry = [
             'token' => $token,
             'collector' => $this->collector,
             'message' => $message,
+            'attempt_count' => $attemptCount,
             'transaction' => $this->sanitizeRecordForLog($record),
-            'webpay' => $this->sanitizeResponseForLog($response),
-            'payload' => $payload,
+            'webpay' => [
+                'summary' => $this->sanitizeResponseForLog($response),
+                'raw' => $this->redactWebpayResponse($response),
+            ],
+            'payload' => $payloadForLog,
+            'payload_xml' => $payloadEnvelope,
+            'target_wsdl' => $targetWsdl,
         ];
 
         $this->appendLog($this->errorLogPath, '[Webpay][IngresarPago][error]', $entry);
@@ -350,6 +395,13 @@ class WebpayIngresarPagoReporter
             return null;
         }
 
+        $webpayMeta = $record['webpay'] ?? null;
+        $webpayRequest = null;
+
+        if (is_array($webpayMeta) && isset($webpayMeta['request'])) {
+            $webpayRequest = $webpayMeta['request'];
+        }
+
         return [
             'token' => $record['token'] ?? null,
             'rut' => $record['rut'] ?? null,
@@ -357,6 +409,9 @@ class WebpayIngresarPagoReporter
             'amount' => $record['amount'] ?? null,
             'selected_ids' => $record['selected_ids'] ?? null,
             'buy_order' => $record['buy_order'] ?? null,
+            'session_id' => $record['session_id'] ?? null,
+            'debts' => $this->sanitizeDebtsForLog($record['debts'] ?? null),
+            'webpay_request' => $this->sanitizeWebpayRequestForLog($webpayRequest),
         ];
     }
 
@@ -373,7 +428,94 @@ class WebpayIngresarPagoReporter
             'amount' => $response['detail']['amount'] ?? null,
             'transaction_date' => $response['detail']['transaction_date'] ?? null,
             'payment_type_code' => $response['detail']['payment_type_code'] ?? null,
+            'shares_number' => $response['detail']['shares_number'] ?? null,
         ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>>|null $debts
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function sanitizeDebtsForLog(mixed $debts): ?array
+    {
+        if (!is_array($debts)) {
+            return null;
+        }
+
+        $result = [];
+
+        foreach ($debts as $debt) {
+            if (!is_array($debt)) {
+                continue;
+            }
+
+            $result[] = [
+                'idempresa' => $debt['idempresa'] ?? null,
+                'idcliente' => $debt['idcliente'] ?? null,
+                'mes' => $debt['mes'] ?? null,
+                'ano' => $debt['ano'] ?? null,
+                'amount' => $debt['amount'] ?? null,
+            ];
+        }
+
+        return $result !== [] ? $result : null;
+    }
+
+    /**
+     * @param array<string, mixed>|null $request
+     */
+    private function sanitizeWebpayRequestForLog(mixed $request): ?array
+    {
+        if (!is_array($request)) {
+            return null;
+        }
+
+        return [
+            'generated_at' => $request['generated_at'] ?? null,
+            'url' => $request['url'] ?? null,
+            'token' => $request['token'] ?? null,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed>|null $response
+     */
+    private function redactWebpayResponse(?array $response): ?array
+    {
+        if (!is_array($response)) {
+            return null;
+        }
+
+        $redacted = $response;
+
+        if (isset($redacted['detail']['card_number'])) {
+            $redacted['detail']['card_number'] = $this->maskCardNumber((string) $redacted['detail']['card_number']);
+        }
+
+        if (isset($redacted['raw']['detail']['cardNumber'])) {
+            $redacted['raw']['detail']['cardNumber'] = $this->maskCardNumber((string) $redacted['raw']['detail']['cardNumber']);
+        }
+
+        if (isset($redacted['raw']['result']['cardDetail']['cardNumber'])) {
+            $redacted['raw']['result']['cardDetail']['cardNumber'] = $this->maskCardNumber((string) $redacted['raw']['result']['cardDetail']['cardNumber']);
+        }
+
+        return $redacted;
+    }
+
+    private function maskCardNumber(string $value): string
+    {
+        $digits = preg_replace('/\D/', '', $value) ?? '';
+        if ($digits === '') {
+            return $value;
+        }
+
+        $length = strlen($digits);
+        if ($length <= 4) {
+            return str_repeat('X', $length);
+        }
+
+        return str_repeat('X', $length - 4) . substr($digits, -4);
     }
 
     /**

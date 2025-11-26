@@ -10,6 +10,16 @@ use Throwable;
 class ZumpagoIngresarPagoReporter
 {
     private const DEFAULT_COLLECTOR = 'ZUMPAGO';
+    private const CHANNEL_LABELS = [
+        '016' => 'WEBPAY',
+        '018' => 'KHIPU',
+        '022' => 'HITES',
+        '024' => 'MACH',
+        '025' => 'BANCO ESTADO',
+        '029' => 'BANCO DE CHILE',
+        '030' => 'BCI',
+        '031' => 'BANCO FALABELLA',
+    ];
 
     /** @var array<string, IngresarPagoService> */
     private array $serviceCache = [];
@@ -199,13 +209,17 @@ class ZumpagoIngresarPagoReporter
 
     private function resolveChannel(string $medioPago): string
     {
-        $medioPago = trim($medioPago);
+        $normalized = strtoupper(trim($medioPago));
+        $label = $normalized !== '' ? $normalized : $this->collector;
 
-        if ($medioPago === '') {
-            return $this->collector;
+        if (preg_match('/(\d{3})/', $normalized, $matches) === 1) {
+            $code = $matches[1];
+            if (isset(self::CHANNEL_LABELS[$code])) {
+                $label = self::CHANNEL_LABELS[$code];
+            }
         }
 
-        return $this->collector . '-' . $medioPago;
+        return $this->collector . ' - ' . $label;
     }
 
     private function formatDate(?string $value): string
