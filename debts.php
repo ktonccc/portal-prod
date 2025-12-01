@@ -358,12 +358,20 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
                                 data-payment-method="bcoestado"
                                 data-payment-available="<?= $bcoestadoAvailable ? 'true' : 'false'; ?>"
                             >
-                                <img
-                                    src="img/Logo_BancoEstado.png"
-                                    alt="BancoEstado"
-                                    class="payment-platforms-logo"
-                                    data-fixed-grayscale="true"
+                                <button
+                                    type="button"
+                                    class="payment-platforms-button js-bancoestado-button"
+                                    data-payment-method="bcoestado"
+                                    data-payment-available="<?= $bcoestadoAvailable ? 'true' : 'false'; ?>"
+                                    aria-label="Pagar con BancoEstado"
                                 >
+                                    <img
+                                        src="img/Logo_BancoEstado.png"
+                                        alt="BancoEstado"
+                                        class="payment-platforms-logo"
+                                        data-fixed-grayscale="true"
+                                    >
+                                </button>
                             </li>
                             <li
                                 class="payment-platforms-item<?= $zumpagoAvailable ? '' : ' payment-platforms-item--unavailable'; ?>"

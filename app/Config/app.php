@@ -42,6 +42,16 @@ return [
         'return_url' => 'https://pagos.homenet.cl/return.php',
         'final_url' => 'https://pagos.homenet.cl/final.php',
     ],
+    'bancoestado' => [
+        'api_url' => getenv('BANCOESTADO_API_URL') ?: 'https://api-pagos.compraqui.cl/prod/trx/api/v2/intencionpago',
+        'api_key' => getenv('BANCOESTADO_API_KEY') ?: '6HQ4Ln8J7I7JjPG07YYZJ9iMeI4KmRai7jCH34Pu',
+        'commerce' => getenv('BANCOESTADO_COMMERCE') ?: 'CInet',
+        'redirect_url' => getenv('BANCOESTADO_REDIRECT_URL') ?: 'https://pagos.inetamericas.cl/pagos/result?id=',
+        'status_url' => getenv('BANCOESTADO_STATUS_URL') ?: 'https://pagos.inetamericas.cl/api/pagos/status',
+        'widget_script' => getenv('BANCOESTADO_WIDGET_SCRIPT') ?: 'https://api-pagos.compraqui.cl/static/formulario/v2/btnPago.js',
+        'jwt_secret' => getenv('BANCOESTADO_JWT_SECRET') ?: '6Yhs83v5-7N1t-lXjg-9og4-8Yn1Lxa192jf',
+        'wsdl' => getenv('BANCOESTADO_WSDL') ?: 'http://ws.inetamericas.cl/SaccBE1029.php?wsdl',
+    ],
     'flow' => (function () {
         $credentialsPath = __DIR__ . '/flow_credentials.php';
         $credentials = [];

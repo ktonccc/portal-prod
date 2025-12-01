@@ -13,6 +13,10 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery.rut@1.1.2/jquery.rut.min.js"
             integrity="sha384-Mt192FDuLToFsHrTgFTWmvklPEAeBXeS7iJZjzCQri/i5+lPniD/nZWS16quo2/l"
             crossorigin="anonymous"></script>
+    <?php $beWidgetScript = trim((string) config_value('bancoestado.widget_script', '')); ?>
+    <?php if ($beWidgetScript !== ''): ?>
+        <script src="<?= h($beWidgetScript); ?>" defer></script>
+    <?php endif; ?>
     <script src="<?= asset('assets/js/app.js'); ?>"></script>
 </body>
 </html>

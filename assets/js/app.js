@@ -6,6 +6,14 @@ $(function () {
         var checkboxes = Array.prototype.slice.call(debtForm.querySelectorAll('.js-debt-checkbox'));
         var summary = debtForm.querySelector('.js-debt-summary');
         var paymentContainer = debtForm.querySelector('.payment-platforms');
+        var bancoEstadoButton = debtForm.querySelector('.js-bancoestado-button');
+        var bancoEstadoState = {
+            selectedIds: [],
+            total: 0,
+            email: '',
+            emailValid: false,
+            canSubmit: false,
+        };
 
         var formatCurrency = function (amount) {
             try {
@@ -44,6 +52,10 @@ $(function () {
                 return checkbox.checked;
             });
 
+            var selectedIds = selected.map(function (checkbox) {
+                return checkbox.value;
+            });
+
             var total = selected.reduce(function (sum, checkbox) {
                 var amount = parseInt(checkbox.getAttribute('data-amount') || '0', 10);
                 return sum + (isNaN(amount) ? 0 : amount);
@@ -66,10 +78,17 @@ $(function () {
             }
 
             var canSubmit = selected.length > 0 && emailValid;
+            bancoEstadoState = {
+                selectedIds: selectedIds,
+                total: total,
+                email: emailValue,
+                emailValid: emailValid,
+                canSubmit: canSubmit,
+            };
 
             var hasAvailableMethod = submitButtons.some(function (button) {
                 return isPaymentMethodAvailable(button);
-            });
+            }) || (bancoEstadoButton ? isPaymentMethodAvailable(bancoEstadoButton) : false);
 
             submitButtons.forEach(function (button) {
                 var methodAvailable = isPaymentMethodAvailable(button);
@@ -78,11 +97,91 @@ $(function () {
                 button.setAttribute('aria-disabled', shouldEnable ? 'false' : 'true');
             });
 
+            if (bancoEstadoButton) {
+                var bancoEstadoAvailable = isPaymentMethodAvailable(bancoEstadoButton);
+                var bancoEstadoEnabled = canSubmit && bancoEstadoAvailable;
+                bancoEstadoButton.disabled = !bancoEstadoEnabled;
+                bancoEstadoButton.setAttribute('aria-disabled', bancoEstadoEnabled ? 'false' : 'true');
+            }
+
             if (paymentContainer) {
                 var containerEnabled = canSubmit && hasAvailableMethod;
                 paymentContainer.classList.toggle('is-enabled', containerEnabled);
                 paymentContainer.setAttribute('aria-disabled', containerEnabled ? 'false' : 'true');
             }
+        };
+
+        var triggerBancoEstadoPayment = function () {
+            if (!bancoEstadoState.canSubmit || !bancoEstadoButton || !isPaymentMethodAvailable(bancoEstadoButton)) {
+                return;
+            }
+
+            var rutField = debtForm.querySelector('input[name="rut"]');
+            var rutValue = rutField ? rutField.value : '';
+
+            var payload = {
+                rut: rutValue,
+                email: bancoEstadoState.email,
+                idcliente: bancoEstadoState.selectedIds,
+            };
+
+            bancoEstadoButton.disabled = true;
+            bancoEstadoButton.classList.add('is-loading');
+
+            fetch('pay_bancoestado.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Solicitud rechazada (' + response.status + ')');
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (!data || data.ok !== true) {
+                        throw new Error(data && data.message ? data.message : 'No fue posible iniciar el pago.');
+                    }
+                    launchBancoEstadoModal(data);
+                })
+                .catch(function (error) {
+                    alert(error && error.message ? error.message : 'No fue posible iniciar el pago con BancoEstado.');
+                })
+                .finally(function () {
+                    bancoEstadoButton.classList.remove('is-loading');
+                    updateState();
+                });
+        };
+
+        var launchBancoEstadoModal = function (result) {
+            var payload = null;
+
+            if (result.intent_payload && typeof result.intent_payload === 'string') {
+                try {
+                    payload = JSON.parse(result.intent_payload);
+                } catch (error) {
+                    payload = null;
+                }
+            } else if (result.intent && typeof result.intent === 'object') {
+                payload = result.intent;
+            }
+
+            if (payload && typeof window.showModal === 'function') {
+                window.showModal(payload);
+                return;
+            }
+
+            if (payload && payload.url) {
+                window.location.href = payload.url;
+                return;
+            }
+
+            alert('No fue posible abrir el botón de pago de BancoEstado. Intenta nuevamente más tarde.');
         };
 
         if (emailInput) {
@@ -93,6 +192,13 @@ $(function () {
         checkboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', updateState);
         });
+
+        if (bancoEstadoButton) {
+            bancoEstadoButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                triggerBancoEstadoPayment();
+            });
+        }
 
         updateState();
     }
