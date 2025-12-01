@@ -2,6 +2,10 @@
 
 Este proyecto contiene el portal para que los clientes de HomeNet consulten y paguen sus deudas a través de Webpay.
 
+> **Estado actual de recaudadores:**  
+> - BancoEstado está configurado **exclusivamente** para la integración de Inet (aún no corre pruebas end-to-end en este repositorio).  
+> - Flow, Zumpago, Webpay y Mercado Pago están parametrizados para HomeNet. Si necesitas usarlos con otra empresa, recuerda ajustar `app/Config/app.php` y las credenciales correspondientes.
+
 ## Requisitos
 
 - PHP 8.1 o superior (con `soap` habilitado).
