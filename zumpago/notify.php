@@ -12,6 +12,21 @@ use App\Services\ZumpagoTransactionStorage;
 
 header('Content-Type: text/plain');
 
+$shouldRedirectToResponse = ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
+    && stripos((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'text/html') !== false
+    && isset($_GET['xml']);
+
+if ($shouldRedirectToResponse) {
+    $responseUrl = (string) config_value('zumpago.response_url', '/zumpago/response.php');
+    if (trim($responseUrl) === '') {
+        $responseUrl = '/zumpago/response.php';
+    }
+
+    $separator = str_contains($responseUrl, '?') ? '&' : '?';
+    header('Location: ' . $responseUrl . $separator . 'xml=' . urlencode((string) $_GET['xml']));
+    exit;
+}
+
 $rawBody = file_get_contents('php://input') ?: '';
 $rawBodyTrimmed = trim($rawBody);
 $headers = function_exists('getallheaders') ? getallheaders() : [];
@@ -65,6 +80,18 @@ $notifyLog = [
     'errors' => [],
 ];
 
+$normalizeTransactionId = static function (string $value): string {
+    $trimmed = trim($value);
+    if ($trimmed === '') {
+        return '';
+    }
+    if (preg_match('/^\d+$/', $trimmed) !== 1) {
+        return $trimmed;
+    }
+    $normalized = ltrim($trimmed, '0');
+    return $normalized !== '' ? $normalized : '0';
+};
+
 if ($encryptedXmlParam !== '') {
     try {
         $config = (array) config_value('zumpago', []);
@@ -114,6 +141,7 @@ if ($encryptedXmlParam !== '') {
 
         $parsedResponseData = $parsedResponse['data'] ?? [];
         $transactionId = trim((string) ($parsedResponseData['IdTransaccion'] ?? ''));
+        $transactionId = $normalizeTransactionId($transactionId);
         if ($transactionId === '') {
             throw new RuntimeException('La notificación no incluye un IdTransaccion válido.');
         }

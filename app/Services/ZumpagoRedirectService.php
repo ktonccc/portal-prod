@@ -129,16 +129,24 @@ class ZumpagoRedirectService
      */
     private function generateTransactionId(string $normalizedRut, array $documentIds): string
     {
-        $numericRut = preg_replace('/\D/', '', $normalizedRut) ?? '';
-        $rutFragment = $numericRut !== '' ? substr($numericRut, -7) : '';
+        $cleanIds = [];
+        foreach ($documentIds as $documentId) {
+            $documentId = trim((string) $documentId);
+            if ($documentId !== '') {
+                $cleanIds[] = $documentId;
+            }
+        }
 
-        $microTimestamp = (string) round(microtime(true) * 1000);
-        $timestampFragment = substr($microTimestamp, -6);
+        if (!empty($cleanIds)) {
+            return implode(',', $cleanIds);
+        }
 
-        $candidate = $rutFragment . $timestampFragment;
-        $candidate = str_pad($candidate, 13, '0', STR_PAD_LEFT);
+        $formattedRut = $this->formatRut($normalizedRut);
+        if ($formattedRut !== '') {
+            return $formattedRut;
+        }
 
-        return substr($candidate, -13);
+        return trim($normalizedRut);
     }
 
     /**
@@ -227,9 +235,46 @@ class ZumpagoRedirectService
         return $value;
     }
 
+    private function formatRut(string $rut): string
+    {
+        $rut = strtoupper(trim($rut));
+        $clean = preg_replace('/[^0-9K]/i', '', $rut) ?? '';
+
+        if ($clean === '') {
+            return '';
+        }
+
+        $dv = '';
+        if (strlen($clean) > 1) {
+            $dv = substr($clean, -1);
+            $body = substr($clean, 0, -1);
+        } else {
+            $body = $clean;
+        }
+
+        $body = ltrim($body, '0');
+        if ($body === '') {
+            return $dv !== '' ? '0-' . $dv : '0';
+        }
+
+        $chunks = [];
+        while (strlen($body) > 3) {
+            $chunks[] = substr($body, -3);
+            $body = substr($body, 0, -3);
+        }
+        $chunks[] = $body;
+
+        $formattedBody = implode('.', array_reverse($chunks));
+
+        if ($dv !== '') {
+            return $formattedBody . '-' . $dv;
+        }
+
+        return $formattedBody;
+    }
+
     private function escapeXml(string $value): string
     {
         return htmlspecialchars($value, ENT_NOQUOTES, 'ISO-8859-1');
     }
 }
-

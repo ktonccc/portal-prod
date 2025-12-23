@@ -36,6 +36,17 @@ $zumpagoDetails = [];
 $processedAt = null;
 $zumpagoTableRows = [];
 $activeCompanyId = null;
+$normalizeTransactionId = static function (string $value): string {
+    $trimmed = trim($value);
+    if ($trimmed === '') {
+        return '';
+    }
+    if (preg_match('/^\d+$/', $trimmed) !== 1) {
+        return $trimmed;
+    }
+    $normalized = ltrim($trimmed, '0');
+    return $normalized !== '' ? $normalized : '0';
+};
 
 if ($encryptedXmlParam !== '') {
     try {
@@ -116,6 +127,7 @@ if ($encryptedXmlParam !== '') {
         $parsedResponseData = $parsedResponse['data'];
         $verificationDetails = $parsedResponse['verification'];
         $transactionId = trim((string) ($parsedResponseData['IdTransaccion'] ?? ''));
+        $transactionId = $normalizeTransactionId($transactionId);
         $responseCode = str_pad(
             trim((string) ($parsedResponseData['CodigoRespuesta'] ?? '')),
             3,
