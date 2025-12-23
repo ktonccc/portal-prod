@@ -296,16 +296,20 @@ footer {
 .payment-platforms {
     width: 100%;
     margin: clamp(1.5rem, 3vw, 2.5rem) 0 0;
-    border: 3px solid #202125;
-    border-radius: 18px;
-    background-color: #ffffff;
-    padding: clamp(1.5rem, 3vw, 2rem);
+    display: flex;
+    justify-content: center;
 }
 
 .payment-platforms-inner {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    border: 3px solid #202125;
+    border-radius: 18px;
+    background-color: #ffffff;
+    padding: clamp(1.25rem, 2.5vw, 1.75rem) clamp(1.5rem, 3vw, 2.5rem);
+    max-width: 100%;
+    width: auto;
 }
 
 .payment-platforms-list {
@@ -313,12 +317,12 @@ footer {
     margin: 0;
     padding: 0;
     display: flex;
-    flex-wrap: nowrap;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: clamp(1rem, 2.5vw, 2rem);
-    flex: 1 1 auto;
-    width: 100%;
-    overflow-x: auto;
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 100%;
 }
 
 .payment-platforms-item {
@@ -370,20 +374,6 @@ footer {
 
 .payment-platforms-button .payment-platforms-logo {
     pointer-events: none;
-}
-
-.payment-platforms-logo[data-fixed-grayscale="true"] {
-    filter: grayscale(100%) !important;
-    opacity: 0.45 !important;
-}
-
-.payment-platforms-item--unavailable .payment-platforms-button {
-    pointer-events: none;
-}
-
-.payment-platforms-item--unavailable .payment-platforms-logo {
-    filter: grayscale(100%) !important;
-    opacity: 0.35 !important;
 }
 
 .rut-form {
@@ -553,10 +543,15 @@ footer {
     }
 
     .payment-platforms {
-        padding: clamp(1.25rem, 5vw, 1.75rem);
+        justify-content: center;
+    }
+
+    .payment-platforms-inner {
+        width: 100%;
     }
 
     .payment-platforms-list {
+        width: 100%;
         flex-direction: column;
         align-items: center;
         gap: clamp(1rem, 4vw, 1.5rem);

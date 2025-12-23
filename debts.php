@@ -333,104 +333,120 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
                     $zumpagoAvailable = $paymentAvailability['zumpago'] ?? true;
                     $flowAvailable = $paymentAvailability['flow'] ?? true;
                     $mercadoPagoAvailable = $paymentAvailability['mercadopago'] ?? true;
+                    $hasAnyPaymentMethod = $webpayAvailable
+                        || $bcoestadoAvailable
+                        || $zumpagoAvailable
+                        || $flowAvailable
+                        || $mercadoPagoAvailable;
                 ?>
-                <div class="payment-platforms" role="region" aria-label="Medios de pago disponibles">
-                    <div class="payment-platforms-inner">
-                        <ul class="payment-platforms-list">
-                            <li
-                                class="payment-platforms-item<?= $webpayAvailable ? '' : ' payment-platforms-item--unavailable'; ?>"
-                                data-payment-method="webpay"
-                                data-payment-available="<?= $webpayAvailable ? 'true' : 'false'; ?>"
-                            >
-                                <button
-                                    type="submit"
-                                    class="payment-platforms-button js-debt-submit"
-                                    disabled
-                                    aria-label="Pagar con Webpay"
+                <?php if ($hasAnyPaymentMethod): ?>
+                    <div class="payment-platforms" role="region" aria-label="Medios de pago disponibles">
+                        <div class="payment-platforms-inner">
+                            <ul class="payment-platforms-list">
+                            <?php if ($webpayAvailable): ?>
+                                <li
+                                    class="payment-platforms-item"
                                     data-payment-method="webpay"
-                                    data-payment-available="<?= $webpayAvailable ? 'true' : 'false'; ?>"
+                                    data-payment-available="true"
                                 >
-                                    <img src="img/Logo-web-pay-plus.png" alt="Webpay Plus" class="payment-platforms-logo">
-                                </button>
-                            </li>
-                            <li
-                                class="payment-platforms-item<?= $bcoestadoAvailable ? '' : ' payment-platforms-item--unavailable'; ?>"
-                                data-payment-method="bcoestado"
-                                data-payment-available="<?= $bcoestadoAvailable ? 'true' : 'false'; ?>"
-                            >
-                                <button
-                                    type="button"
-                                    class="payment-platforms-button js-bancoestado-button"
+                                    <button
+                                        type="submit"
+                                        class="payment-platforms-button js-debt-submit"
+                                        disabled
+                                        aria-label="Pagar con Webpay"
+                                        data-payment-method="webpay"
+                                        data-payment-available="true"
+                                    >
+                                        <img src="img/Logo-web-pay-plus.png" alt="Webpay Plus" class="payment-platforms-logo">
+                                    </button>
+                                </li>
+                            <?php endif; ?>
+                            <?php if ($bcoestadoAvailable): ?>
+                                <li
+                                    class="payment-platforms-item"
                                     data-payment-method="bcoestado"
-                                    data-payment-available="<?= $bcoestadoAvailable ? 'true' : 'false'; ?>"
-                                    aria-label="Pagar con BancoEstado"
+                                    data-payment-available="true"
                                 >
-                                    <img
-                                        src="img/Logo_BancoEstado.png"
-                                        alt="BancoEstado"
-                                        class="payment-platforms-logo"
-                                        data-fixed-grayscale="true"
+                                    <button
+                                        type="button"
+                                        class="payment-platforms-button js-bancoestado-button"
+                                        data-payment-method="bcoestado"
+                                        data-payment-available="true"
+                                        aria-label="Pagar con BancoEstado"
                                     >
-                                </button>
-                            </li>
-                            <li
-                                class="payment-platforms-item<?= $zumpagoAvailable ? '' : ' payment-platforms-item--unavailable'; ?>"
-                                data-payment-method="zumpago"
-                                data-payment-available="<?= $zumpagoAvailable ? 'true' : 'false'; ?>"
-                            >
-                                <button
-                                    type="submit"
-                                    class="payment-platforms-button js-debt-submit"
-                                    disabled
-                                    aria-label="Pagar con Zumpago"
-                                    formaction="pay_zumpago.php"
+                                        <img
+                                            src="img/Logo_BancoEstado.png"
+                                            alt="BancoEstado"
+                                            class="payment-platforms-logo"
+                                        >
+                                    </button>
+                                </li>
+                            <?php endif; ?>
+                            <?php if ($zumpagoAvailable): ?>
+                                <li
+                                    class="payment-platforms-item"
                                     data-payment-method="zumpago"
-                                    data-payment-available="<?= $zumpagoAvailable ? 'true' : 'false'; ?>"
+                                    data-payment-available="true"
                                 >
-                                    <img src="img/Logo-zumpago.png" alt="Zumpago" class="payment-platforms-logo">
-                                </button>
-                            </li>
-                            <li
-                                class="payment-platforms-item<?= $flowAvailable ? '' : ' payment-platforms-item--unavailable'; ?>"
-                                data-payment-method="flow"
-                                data-payment-available="<?= $flowAvailable ? 'true' : 'false'; ?>"
-                            >
-                                <button
-                                    type="submit"
-                                    class="payment-platforms-button js-debt-submit"
-                                    disabled
-                                    aria-label="Pagar con Flow"
-                                    formaction="pay_flow.php"
-                                    data-payment-method="flow"
-                                    data-payment-available="<?= $flowAvailable ? 'true' : 'false'; ?>"
-                                >
-                                    <img src="img/Logo-flow.svg" alt="Flow" class="payment-platforms-logo">
-                                </button>
-                            </li>
-                            <li
-                                class="payment-platforms-item<?= $mercadoPagoAvailable ? '' : ' payment-platforms-item--unavailable'; ?>"
-                                data-payment-method="mercadopago"
-                                data-payment-available="<?= $mercadoPagoAvailable ? 'true' : 'false'; ?>"
-                            >
-                                <button
-                                    type="submit"
-                                    class="payment-platforms-button js-debt-submit"
-                                    disabled
-                                    aria-label="Pagar con Mercado Pago"
-                                    formaction="pay_mercadopago.php"
-                                    data-payment-method="mercadopago"
-                                    data-payment-available="<?= $mercadoPagoAvailable ? 'true' : 'false'; ?>"
-                                >
-                                    <img
-                                        src="img/Logo-mercado-pago.png"
-                                        alt="Mercado Pago"
-                                        class="payment-platforms-logo"
+                                    <button
+                                        type="submit"
+                                        class="payment-platforms-button js-debt-submit"
+                                        disabled
+                                        aria-label="Pagar con Zumpago"
+                                        formaction="pay_zumpago.php"
+                                        data-payment-method="zumpago"
+                                        data-payment-available="true"
                                     >
-                                </button>
-                            </li>
-                        </ul>
+                                        <img src="img/Logo-zumpago.png" alt="Zumpago" class="payment-platforms-logo">
+                                    </button>
+                                </li>
+                            <?php endif; ?>
+                            <?php if ($flowAvailable): ?>
+                                <li
+                                    class="payment-platforms-item"
+                                    data-payment-method="flow"
+                                    data-payment-available="true"
+                                >
+                                    <button
+                                        type="submit"
+                                        class="payment-platforms-button js-debt-submit"
+                                        disabled
+                                        aria-label="Pagar con Flow"
+                                        formaction="pay_flow.php"
+                                        data-payment-method="flow"
+                                        data-payment-available="true"
+                                    >
+                                        <img src="img/Logo-flow.svg" alt="Flow" class="payment-platforms-logo">
+                                    </button>
+                                </li>
+                            <?php endif; ?>
+                            <?php if ($mercadoPagoAvailable): ?>
+                                <li
+                                    class="payment-platforms-item"
+                                    data-payment-method="mercadopago"
+                                    data-payment-available="true"
+                                >
+                                    <button
+                                        type="submit"
+                                        class="payment-platforms-button js-debt-submit"
+                                        disabled
+                                        aria-label="Pagar con Mercado Pago"
+                                        formaction="pay_mercadopago.php"
+                                        data-payment-method="mercadopago"
+                                        data-payment-available="true"
+                                    >
+                                        <img
+                                            src="img/Logo-mercado-pago.png"
+                                            alt="Mercado Pago"
+                                            class="payment-platforms-logo"
+                                        >
+                                    </button>
+                                </li>
+                            <?php endif; ?>
+                            </ul>
+                        </div>
                     </div>
-                </div>
+                <?php endif; ?>
             </form>
         <?php endif; ?>
     </section>
