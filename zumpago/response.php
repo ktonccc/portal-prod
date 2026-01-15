@@ -36,10 +36,27 @@ $zumpagoDetails = [];
 $processedAt = null;
 $zumpagoTableRows = [];
 $activeCompanyId = null;
+$transactionId = null;
 $normalizeTransactionId = static function (string $value): string {
     $trimmed = trim($value);
     if ($trimmed === '') {
         return '';
+    }
+    if (str_contains($trimmed, ',')) {
+        $parts = array_map('trim', explode(',', $trimmed));
+        $normalizedParts = [];
+        foreach ($parts as $part) {
+            if ($part === '') {
+                continue;
+            }
+            if (preg_match('/^\d+$/', $part) === 1) {
+                $part = ltrim($part, '0');
+                $part = $part !== '' ? $part : '0';
+            }
+            $normalizedParts[] = $part;
+        }
+
+        return implode(',', $normalizedParts);
     }
     if (preg_match('/^\d+$/', $trimmed) !== 1) {
         return $trimmed;
@@ -498,4 +515,3 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
         </div>
     </section>
 <?php view('layout/footer'); ?>
-$transactionId = null;
