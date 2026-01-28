@@ -7,7 +7,7 @@ require __DIR__ . '/app/bootstrap.php';
 use App\Services\IngresarPagoService;
 use App\Services\PaymentLoggerService;
 use App\Services\WebpayIngresarPagoReporter;
-use App\Services\WebpayNormalService;
+use App\Services\WebpayPlusService;
 use App\Services\WebpayTransactionStorage;
 
 $pageTitle = 'Resultado del Pago';
@@ -42,47 +42,54 @@ $tbkOrder = $valueFromRequest('TBK_ORDEN_COMPRA');
 $tbkSessionId = $valueFromRequest('TBK_ID_SESION');
 
 if ($tokenWs !== '') {
-
     try {
-        $webpay = new WebpayNormalService((array) config_value('webpay', []));
-        $result = $webpay->getTransactionResult($tokenWs);
-        $output = $result->detailOutput;
-
-        if (is_array($output)) {
-            // Normal transaction should return a single object, take the first item if needed.
-            $output = $output[0] ?? null;
+        $webpayConfig = (array) config_value('webpay', []);
+        $finalUrl = (string) ($webpayConfig['final_url'] ?? 'final.php');
+        if ($finalUrl === '') {
+            $finalUrl = 'final.php';
         }
+
+        $webpay = new WebpayPlusService($webpayConfig);
+        $result = $webpay->commitTransaction($tokenWs);
 
         $responseCode = null;
         $paymentTypeCode = null;
         $authorizationCode = null;
         $sharesNumber = null;
         $amountValue = null;
+        $transactionDate = null;
+        $cardNumber = null;
+        $buyOrder = null;
+        $sessionId = null;
 
-        if (is_object($output)) {
-            $responseCode = isset($output->responseCode) ? (int) $output->responseCode : null;
-            $paymentTypeCode = isset($output->paymentTypeCode) ? (string) $output->paymentTypeCode : null;
-            $authorizationCode = isset($output->authorizationCode) ? (string) $output->authorizationCode : null;
-            $sharesNumber = isset($output->sharesNumber) ? $output->sharesNumber : null;
-            $amountValue = isset($output->amount) ? $output->amount : null;
+        if (is_object($result)) {
+            $responseCode = $result->getResponseCode();
+            $paymentTypeCode = $result->getPaymentTypeCode();
+            $authorizationCode = $result->getAuthorizationCode();
+            $sharesNumber = $result->getInstallmentsNumber();
+            $amountValue = $result->getAmount();
+            $transactionDate = $result->getTransactionDate();
+            $cardNumber = $result->getCardNumber();
+            $buyOrder = $result->getBuyOrder();
+            $sessionId = $result->getSessionId();
         }
 
         if ($responseCode === 0) {
-            $formAction = $result->urlRedirection;
+            $formAction = $finalUrl;
             $message = 'Pago procesado correctamente. Estamos generando tu comprobante.';
 
             try {
                 $logger = new PaymentLoggerService((string) config_value('services.payment_logger_wsdl'));
                 $logger->log([
-                    'BuyOrder' => $result->buyOrder,
-                    'CardNumber' => $result->cardDetail->cardNumber ?? '',
-                    'AutorizacionCode' => $output->authorizationCode ?? '',
-                    'PaymentTypeCode' => $output->paymentTypeCode ?? '',
-                    'ResponseCode' => $output->responseCode ?? '',
-                    'SharesNumber' => $output->sharesNumber ?? 0,
-                    'Monto' => $output->amount ?? 0,
-                    'CodigoComercio' => $output->commerceCode ?? '',
-                    'TransactionDate' => $result->transactionDate ?? '',
+                    'BuyOrder' => $buyOrder ?? '',
+                    'CardNumber' => $cardNumber ?? '',
+                    'AutorizacionCode' => $authorizationCode ?? '',
+                    'PaymentTypeCode' => $paymentTypeCode ?? '',
+                    'ResponseCode' => $responseCode ?? '',
+                    'SharesNumber' => $sharesNumber ?? 0,
+                    'Monto' => $amountValue ?? 0,
+                    'CodigoComercio' => $webpayConfig['commerce_code'] ?? '',
+                    'TransactionDate' => $transactionDate ?? '',
                 ]);
             } catch (Throwable $e) {
                 // Continuamos el flujo aun cuando no es posible registrar el resultado.
@@ -97,7 +104,6 @@ if ($tokenWs !== '') {
         try {
             $storage = new WebpayTransactionStorage(__DIR__ . '/app/storage/webpay');
             $rawResult = json_decode(json_encode($result, JSON_UNESCAPED_UNICODE), true);
-            $rawOutput = json_decode(json_encode($output, JSON_UNESCAPED_UNICODE), true);
 
             $transactionRecord = $storage->appendResponse($tokenWs, [
                 'received_at' => time(),
@@ -108,14 +114,14 @@ if ($tokenWs !== '') {
                     'payment_type_code' => $paymentTypeCode,
                     'shares_number' => $sharesNumber,
                     'amount' => $amountValue,
-                    'transaction_date' => $result->transactionDate ?? null,
-                    'card_number' => $result->cardDetail->cardNumber ?? null,
-                    'buy_order' => $result->buyOrder ?? null,
-                    'session_id' => $result->sessionId ?? null,
+                    'transaction_date' => $transactionDate,
+                    'card_number' => $cardNumber,
+                    'buy_order' => $buyOrder,
+                    'session_id' => $sessionId,
                 ],
                 'raw' => [
                     'result' => $rawResult,
-                    'detail' => $rawOutput,
+                    'detail' => $rawResult,
                 ],
             ]);
 
@@ -190,16 +196,10 @@ if ($tokenWs !== '') {
     }
 
     $abortResult = null;
-    $abortOutput = null;
 
     try {
-        $webpay = new WebpayNormalService((array) config_value('webpay', []));
-        $abortResult = $webpay->getTransactionResult($tbkToken);
-        $abortOutput = $abortResult->detailOutput;
-
-        if (is_array($abortOutput)) {
-            $abortOutput = $abortOutput[0] ?? null;
-        }
+        $webpay = new WebpayPlusService((array) config_value('webpay', []));
+        $abortResult = $webpay->getTransactionStatus($tbkToken);
     } catch (Throwable $exception) {
         error_log(
             sprintf(
@@ -223,25 +223,22 @@ if ($tokenWs !== '') {
     $abortSharesNumber = null;
     $abortAmountValue = null;
 
-    if (is_object($abortOutput)) {
-        $abortResponseCode = isset($abortOutput->responseCode) ? (int) $abortOutput->responseCode : null;
-        $abortPaymentType = isset($abortOutput->paymentTypeCode) ? (string) $abortOutput->paymentTypeCode : null;
-        $abortAuthorizationCode = isset($abortOutput->authorizationCode) ? (string) $abortOutput->authorizationCode : null;
-        $abortSharesNumber = $abortOutput->sharesNumber ?? null;
-        $abortAmountValue = $abortOutput->amount ?? null;
+    if (is_object($abortResult)) {
+        $abortResponseCode = $abortResult->getResponseCode();
+        $abortPaymentType = $abortResult->getPaymentTypeCode();
+        $abortAuthorizationCode = $abortResult->getAuthorizationCode();
+        $abortSharesNumber = $abortResult->getInstallmentsNumber();
+        $abortAmountValue = $abortResult->getAmount();
     }
 
     $rawAbortResult = $abortResult !== null
         ? json_decode(json_encode($abortResult, JSON_UNESCAPED_UNICODE), true)
         : null;
-    $rawAbortOutput = $abortOutput !== null
-        ? json_decode(json_encode($abortOutput, JSON_UNESCAPED_UNICODE), true)
-        : null;
 
-    $abortTransactionDate = $rawAbortResult['transactionDate'] ?? null;
-    $abortCardNumber = $rawAbortResult['cardDetail']['cardNumber'] ?? null;
-    $abortBuyOrder = $rawAbortResult['buyOrder'] ?? ($tbkOrder !== '' ? $tbkOrder : null);
-    $abortSessionId = $rawAbortResult['sessionId'] ?? ($tbkSessionId !== '' ? $tbkSessionId : null);
+    $abortTransactionDate = $rawAbortResult['transaction_date'] ?? null;
+    $abortCardNumber = $rawAbortResult['card_number'] ?? null;
+    $abortBuyOrder = $rawAbortResult['buy_order'] ?? ($tbkOrder !== '' ? $tbkOrder : null);
+    $abortSessionId = $rawAbortResult['session_id'] ?? ($tbkSessionId !== '' ? $tbkSessionId : null);
 
     try {
         $storage = new WebpayTransactionStorage(__DIR__ . '/app/storage/webpay');
@@ -261,7 +258,7 @@ if ($tokenWs !== '') {
             ],
             'raw' => [
                 'result' => $rawAbortResult,
-                'detail' => $rawAbortOutput,
+                'detail' => $rawAbortResult,
             ],
             'tbk' => [
                 'token' => $tbkToken,

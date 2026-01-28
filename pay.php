@@ -5,7 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/app/bootstrap.php';
 
 use App\Services\DebtService;
-use App\Services\WebpayNormalService;
+use App\Services\WebpayPlusService;
 use App\Services\WebpayTransactionStorage;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -144,15 +144,12 @@ if (empty($errors)) {
             $sessionId = session_id();
             $buyOrder = substr(implode('-', $selectedIds) . '-' . time(), 0, 26);
             $returnUrl = (string) ($webpayConfig['return_url'] ?? '');
-            $finalUrl = (string) ($webpayConfig['final_url'] ?? '');
-
-            $webpay = new WebpayNormalService($webpayConfig);
-            $transactionData = $webpay->initTransaction(
+            $webpay = new WebpayPlusService($webpayConfig);
+            $transactionData = $webpay->createTransaction(
                 $totalAmount,
                 $buyOrder,
                 $sessionId,
-                $returnUrl,
-                $finalUrl
+                $returnUrl
             );
 
             $_SESSION['webpay']['last_transaction'] = [

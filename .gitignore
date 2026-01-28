@@ -1,0 +1,9 @@
+# Logs
+app/logs/
+
+# Storage directories
+app/storage/flow/
+app/storage/mercadopago/
+app/storage/webpay/
+app/storage/zumpago/
+/actualizacion webpay/

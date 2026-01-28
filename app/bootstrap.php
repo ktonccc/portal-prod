@@ -39,6 +39,26 @@ register_shutdown_function(
 $baseDir = dirname(__DIR__);
 
 require_once $baseDir . '/vendor/autoload.php';
+// Prefer the REST SDK sources if present (Webpay Plus), since SOAP is deprecated.
+$transbankRestSdk = $baseDir . '/actualizacion webpay/transbank-sdk-php/src';
+if (is_dir($transbankRestSdk)) {
+    spl_autoload_register(
+        static function (string $class) use ($transbankRestSdk): void {
+            $prefix = 'Transbank\\';
+            if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
+                return;
+            }
+
+            $relative = substr($class, strlen($prefix));
+            $path = $transbankRestSdk . '/' . str_replace('\\', '/', $relative) . '.php';
+            if (file_exists($path)) {
+                require_once $path;
+            }
+        },
+        true,
+        true
+    );
+}
 if (file_exists($baseDir . '/lib/nusoap.php')) {
     require_once $baseDir . '/lib/nusoap.php';
 }
