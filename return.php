@@ -6,6 +6,7 @@ require __DIR__ . '/app/bootstrap.php';
 
 use App\Services\IngresarPagoService;
 use App\Services\PaymentLoggerService;
+use App\Services\WebpayConfigResolver;
 use App\Services\WebpayIngresarPagoReporter;
 use App\Services\WebpayPlusService;
 use App\Services\WebpayTransactionStorage;
@@ -41,9 +42,41 @@ $tbkToken = $valueFromRequest('TBK_TOKEN');
 $tbkOrder = $valueFromRequest('TBK_ORDEN_COMPRA');
 $tbkSessionId = $valueFromRequest('TBK_ID_SESION');
 
+error_log(
+    sprintf(
+        "[%s] [WebpayPlus][return-received] %s%s",
+        date('Y-m-d H:i:s'),
+        json_encode([
+            'token_ws' => $tokenWs !== '' ? 'present' : '',
+            'tbk_token' => $tbkToken !== '' ? 'present' : '',
+            'tbk_order' => $tbkOrder !== '' ? $tbkOrder : null,
+            'tbk_session_id' => $tbkSessionId !== '' ? $tbkSessionId : null,
+            'request_uri' => $_SERVER['REQUEST_URI'] ?? null,
+            'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? null,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        PHP_EOL
+    ),
+    3,
+    __DIR__ . '/app/logs/webpay.log'
+);
+
 if ($tokenWs !== '') {
     try {
-        $webpayConfig = (array) config_value('webpay', []);
+        $webpayBaseConfig = (array) config_value('webpay', []);
+        $storage = new WebpayTransactionStorage(__DIR__ . '/app/storage/webpay');
+        $record = $storage->get($tokenWs);
+        $companyId = null;
+        if (is_array($record)) {
+            $companyId = (string) ($record['company_id'] ?? ($record['debts'][0]['idempresa'] ?? '') ?? '');
+        }
+
+        if ($companyId === '') {
+            throw new RuntimeException('No fue posible determinar el IdEmpresa para Webpay.');
+        }
+
+        $resolver = new WebpayConfigResolver($webpayBaseConfig);
+        $webpayConfig = $resolver->resolveByCompanyId($companyId !== '' ? $companyId : null);
+
         $finalUrl = (string) ($webpayConfig['final_url'] ?? 'final.php');
         if ($finalUrl === '') {
             $finalUrl = 'final.php';
@@ -102,7 +135,6 @@ if ($tokenWs !== '') {
         }
 
         try {
-            $storage = new WebpayTransactionStorage(__DIR__ . '/app/storage/webpay');
             $rawResult = json_decode(json_encode($result, JSON_UNESCAPED_UNICODE), true);
 
             $transactionRecord = $storage->appendResponse($tokenWs, [
@@ -183,6 +215,19 @@ if ($tokenWs !== '') {
             );
         }
     } catch (Throwable $exception) {
+        error_log(
+            sprintf(
+                "[%s] [WebpayPlus][commit-error] %s%s",
+                date('Y-m-d H:i:s'),
+                json_encode([
+                    'message' => $exception->getMessage(),
+                    'token' => $tokenWs,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                PHP_EOL
+            ),
+            3,
+            __DIR__ . '/app/logs/webpay.log'
+        );
         $errors[] = 'Ocurrió un error al obtener el resultado de la transacción.';
     }
 } elseif ($tbkToken !== '') {
@@ -198,12 +243,27 @@ if ($tokenWs !== '') {
     $abortResult = null;
 
     try {
-        $webpay = new WebpayPlusService((array) config_value('webpay', []));
+        $webpayBaseConfig = (array) config_value('webpay', []);
+        $storage = new WebpayTransactionStorage(__DIR__ . '/app/storage/webpay');
+        $record = $storage->get($tbkToken);
+        $companyId = null;
+        if (is_array($record)) {
+            $companyId = (string) ($record['company_id'] ?? ($record['debts'][0]['idempresa'] ?? '') ?? '');
+        }
+
+        if ($companyId === '') {
+            throw new RuntimeException('No fue posible determinar el IdEmpresa para Webpay.');
+        }
+
+        $resolver = new WebpayConfigResolver($webpayBaseConfig);
+        $webpayConfig = $resolver->resolveByCompanyId($companyId !== '' ? $companyId : null);
+
+        $webpay = new WebpayPlusService($webpayConfig);
         $abortResult = $webpay->getTransactionStatus($tbkToken);
     } catch (Throwable $exception) {
         error_log(
             sprintf(
-                "[%s] [Webpay][return][abort] %s%s",
+                "[%s] [WebpayPlus][return][abort] %s%s",
                 date('Y-m-d H:i:s'),
                 json_encode([
                     'message' => 'No fue posible consultar el estado de la transacción abortada.',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/app/bootstrap.php';
 
 use App\Services\DebtService;
+use App\Services\WebpayConfigResolver;
 use App\Services\WebpayPlusService;
 use App\Services\WebpayTransactionStorage;
 
@@ -140,7 +141,21 @@ if (empty($errors)) {
         $errors[] = 'El monto total de las deudas seleccionadas no es válido.';
     } else {
         try {
-            $webpayConfig = (array) config_value('webpay', []);
+            $webpayBaseConfig = (array) config_value('webpay', []);
+            $companyId = '';
+            if (!empty($selectedDebts)) {
+                $firstDebt = $selectedDebts[0] ?? null;
+                if (is_array($firstDebt)) {
+                    $companyId = (string) ($firstDebt['idempresa'] ?? '');
+                }
+            }
+
+            if ($companyId === '') {
+                throw new RuntimeException('No fue posible determinar el IdEmpresa para Webpay.');
+            }
+
+            $resolver = new WebpayConfigResolver($webpayBaseConfig);
+            $webpayConfig = $resolver->resolveByCompanyId($companyId !== '' ? $companyId : null);
             $sessionId = session_id();
             $buyOrder = substr(implode('-', $selectedIds) . '-' . time(), 0, 26);
             $returnUrl = (string) ($webpayConfig['return_url'] ?? '');
@@ -185,6 +200,7 @@ if (empty($errors)) {
                     'buy_order' => $buyOrder,
                     'session_id' => $sessionId,
                     'created_at' => time(),
+                    'company_id' => $companyId,
                     'rut' => $normalizedRut,
                     'email' => $email,
                     'amount' => $totalAmount,
@@ -217,6 +233,22 @@ if (empty($errors)) {
             }
 
         } catch (Throwable $exception) {
+            error_log(
+                sprintf(
+                    "[%s] [WebpayPlus][create-error] %s%s",
+                    date('Y-m-d H:i:s'),
+                    json_encode([
+                        'message' => $exception->getMessage(),
+                        'buy_order' => $buyOrder ?? null,
+                        'amount' => $totalAmount ?? null,
+                        'session_id' => $sessionId ?? null,
+                        'return_url' => $returnUrl ?? null,
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    PHP_EOL
+                ),
+                3,
+                __DIR__ . '/app/logs/webpay.log'
+            );
             $errors[] = 'No fue posible iniciar la transacción con Webpay.';
         }
     }

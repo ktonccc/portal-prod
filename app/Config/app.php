@@ -40,6 +40,36 @@ return [
         'environment' => 'PRODUCCION',
         'return_url' => 'https://pagos.homenet.cl/return.php',
         'final_url' => 'https://pagos.homenet.cl/final.php',
+        // Configuración por empresa (IdEmpresa). Si no aplica, se usa el bloque base.
+        'companies' => [
+            // Frata BP (pendiente credenciales)
+            // '764430824' => [
+            //     'label' => 'Frata BP',
+            //     'commerce_code' => '597035425993',
+            //     'api_key' => '273b6e1b0cd31094898403bddca70f5b',
+            //     'environment' => 'PRODUCCION',
+            //     'return_url' => 'https://pagos.homenet.cl/return.php',
+            //     'final_url' => 'https://pagos.homenet.cl/final.php',
+            // ],
+            // WAM BP
+            '765316081' => [
+                'label' => 'WAM BP',
+                'commerce_code' => '597035425993',
+                'api_key' => '273b6e1b0cd31094898403bddca70f5b',
+                'environment' => 'PRODUCCION',
+                'return_url' => 'https://pagos.homenet.cl/return.php',
+                'final_url' => 'https://pagos.homenet.cl/final.php',
+            ],
+            // Fullnet BP (pendiente credenciales)
+            // '76734662K' => [
+            //     'label' => 'Fullnet BP',
+            //     'commerce_code' => '597035425993',
+            //     'api_key' => '273b6e1b0cd31094898403bddca70f5b',
+            //     'environment' => 'PRODUCCION',
+            //     'return_url' => 'https://pagos.homenet.cl/return.php',
+            //     'final_url' => 'https://pagos.homenet.cl/final.php',
+            // ],
+        ],
     ],
     'bancoestado' => [
         'api_url' => getenv('BANCOESTADO_API_URL') ?: 'https://api-pagos.compraqui.cl/prod/trx/api/v2/intencionpago',
