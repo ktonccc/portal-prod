@@ -41,28 +41,8 @@ view('layout/header', compact('pageTitle', 'bodyClass'));
                 <p class="text-center text-muted"><?= h($extra); ?></p>
             <?php endif; ?>
 
-            <?php if ($status === 'success' && is_array($lastTransaction)): ?>
-                <hr>
-                <h5 class="text-center mb-3">Resumen del pago</h5>
-                <div class="row text-center">
-                    <div class="col-md-4 mb-3">
-                        <span class="d-block text-muted small">ID Cliente</span>
-                        <strong><?= h($lastTransaction['idcliente'] ?? ''); ?></strong>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <span class="d-block text-muted small">RUT</span>
-                        <strong><?= h(format_rut((string) ($lastTransaction['rut'] ?? ''))); ?></strong>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <span class="d-block text-muted small">Monto</span>
-                        <strong><?= h(format_currency((int) ($lastTransaction['amount'] ?? 0))); ?></strong>
-                    </div>
-                </div>
-            <?php endif; ?>
-
             <div class="text-center mt-4">
                 <a href="https://www.homenet.cl" class="btn btn-primary">Volver a HomeNet</a>
-                <a href="index.php" class="btn btn-outline-secondary ml-2">Realizar otro pago</a>
             </div>
         </div>
     </div>

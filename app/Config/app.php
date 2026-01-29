@@ -54,9 +54,9 @@ return [
             // WAM BP
             '765316081' => [
                 'label' => 'WAM BP',
-                'commerce_code' => '597035425993',
-                'api_key' => '273b6e1b0cd31094898403bddca70f5b',
-                'environment' => 'PRODUCCION',
+                'commerce_code' => '597055555532',
+                'api_key' => '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C',
+                'environment' => 'INTEGRACION',
                 'return_url' => 'https://pagos.homenet.cl/return.php',
                 'final_url' => 'https://pagos.homenet.cl/final.php',
             ],
