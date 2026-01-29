@@ -47,7 +47,7 @@ Esta guia resume los cambios aplicados para reemplazar Webpay SOAP por Webpay Pl
 
 7) Configuracion multi-empresa (secrets por compania)
 - Se agrego `app/Services/WebpayConfigResolver.php` para resolver credenciales por `idempresa`.
-- `app/Config/app.php` ahora soporta `webpay.default_company_id` y `webpay.companies`.
+- `app/Config/app.php` soporta `webpay.companies` y un bloque base para fallback.
 - `pay.php` resuelve el perfil segun la primera deuda seleccionada.
 - `return.php` resuelve el perfil segun el `company_id` guardado en storage.
 
@@ -66,10 +66,10 @@ Esta guia resume los cambios aplicados para reemplazar Webpay SOAP por Webpay Pl
   - `WebpayPlus status raw response`
 - Revisar `app/storage/webpay/*.json` para `response_code` y datos del pago.
 
-## Ultima configuracion aplicada en Homenet
-- Ambiente: `PRODUCCION`
-- `commerce_code`: `597035425993`
-- `api_key`: `273b6e1b0cd31094898403bddca70f5b`
+## Ultima configuracion aplicada en Homenet (base + empresas)
+- Bloque base (`webpay`): `commerce_code` `597035425993`, `api_key` `273b6e1b0cd31094898403bddca70f5b`, `PRODUCCION`.
+- Empresa FRATA BP (`idempresa` `764430824`): `commerce_code` `597035425993`, `api_key` `273b6e1b0cd31094898403bddca70f5b`, `PRODUCCION`.
+- Empresa WAM BP (`idempresa` `765316081`): `commerce_code` `597053062413`, `api_key` `38adfcde-4231-4380-b57e-d503d6166003`, `PRODUCCION`.
 - `return_url`: `https://pagos.homenet.cl/return.php`
 - `final_url`: `https://pagos.homenet.cl/final.php`
 
@@ -82,7 +82,7 @@ Objetivo: migrar Webpay SOAP a Webpay Plus REST usando apiKey.
 - `webpay.environment = "PRODUCCION"`
 - `webpay.return_url = "https://tu-dominio/return.php"`
 - `webpay.final_url = "https://tu-dominio/final.php"`
-- (opcional) `webpay.default_company_id` y `webpay.companies` para múltiples empresas.
+- (opcional) `webpay.companies` para múltiples empresas.
 
 2) Autoload SDK REST:
 - En `app/bootstrap.php` registrar autoload PSR-4 para `Transbank\\` hacia `actualizacion webpay/transbank-sdk-php/src`.
@@ -127,7 +127,7 @@ Necesito migrar Webpay SOAP a Webpay Plus REST. Aplica estos cambios:
 6) pay.php y return.php: agrega logs de diagnostico (return-received, create-error, commit-error).
 7) app/Services/WebpayConfigResolver.php: agrega soporte multi-empresa por idempresa.
 8) app/Services/WebpayNormalService.php: elimina el servicio SOAP.
-9) app/Config/app.php: elimina private_key_path y public_cert_path si ya no usas SOAP y agrega companies/default_company_id si aplica.
+9) app/Config/app.php: elimina private_key_path y public_cert_path si ya no usas SOAP y agrega companies si aplica.
 10) .gitignore: ignora app/logs/ y app/storage/webpay/ y elimina del indice si ya estaban trackeados.
 ```
 
