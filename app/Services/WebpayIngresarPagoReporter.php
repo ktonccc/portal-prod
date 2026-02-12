@@ -9,7 +9,7 @@ use Throwable;
 
 class WebpayIngresarPagoReporter
 {
-    private const DEFAULT_COLLECTOR = 'WEBPAY';
+    private const DEFAULT_COLLECTOR = 'TRANSBANK';
 
     /** @var array<string, IngresarPagoService> */
     private array $serviceCache = [];
@@ -216,7 +216,9 @@ class WebpayIngresarPagoReporter
             return $this->collector;
         }
 
-        $channel = $this->collector . '-' . $paymentTypeCode;
+        //$channel = $this->collector . '-' . $paymentTypeCode;
+        $channel = $paymentTypeCode;
+
 
         $installmentsNumber = $this->normalizeInt($installments);
         if ($installmentsNumber !== null && $installmentsNumber > 0) {

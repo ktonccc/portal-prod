@@ -192,7 +192,8 @@ if ($tokenWs !== '') {
                         new IngresarPagoService($ingresarPagoWsdl),
                         __DIR__ . '/app/logs/webpay-ingresar-pago.log',
                         __DIR__ . '/app/logs/webpay-ingresar-pago-error.log',
-                        'WEBPAY',
+                        'TRANSBANK',
+                       // 'WEBPAY',
                         $endpointOverrides
                     );
                     $reporter->report($tokenWs);
