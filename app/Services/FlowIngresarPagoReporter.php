@@ -14,6 +14,9 @@ class FlowIngresarPagoReporter
         'TRANSFERENCIAS BANCARIAS VÍA KHIPU' => 'KHIPU',
         'TRANSFERENCIAS BANCARIAS VIA KHIPU' => 'KHIPU',
         'TRANSFERENCIAS BANCARIAS V?A KHIPU' => 'KHIPU',
+        'TRANSFERENCIAS BANCARIAS VÍA ETPAY' => 'ETPAY',
+        'TRANSFERENCIAS BANCARIAS VIA ETPAY' => 'ETPAY',
+        'TRANSFERENCIAS BANCARIAS V?A ETPAY' => 'ETPAY',
     ];
     /** @var array<string, IngresarPagoService> */
     private array $serviceCache = [];
