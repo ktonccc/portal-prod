@@ -154,6 +154,7 @@ if (empty($errors)) {
                 'transaction' => $transactionData['transaction'],
                 'redirect_url' => $transactionData['redirect_url'],
                 'endpoint' => $transactionData['endpoint'],
+                'num_cliente' => $transactionData['transaction']['num_cliente'] ?? '',
             ];
             $_SESSION['zumpago']['debug'] = [
                 'payload' => [
@@ -195,6 +196,7 @@ if (empty($errors)) {
                     'endpoint' => $transactionData['endpoint'],
                     'redirect_url' => $transactionData['redirect_url'],
                     'transaction' => $transactionData['transaction'],
+                    'num_cliente' => $transactionData['transaction']['num_cliente'] ?? '',
                     'zumpago' => [
                         'request' => [
                             'generated_at' => gmdate('c'),
@@ -202,6 +204,7 @@ if (empty($errors)) {
                             'redirect_url' => $transactionData['redirect_url'],
                             'xml' => $transactionData['xml'],
                             'encrypted_xml' => $transactionData['encrypted_xml'],
+                            'num_cliente' => $transactionData['transaction']['num_cliente'] ?? '',
                         ],
                         'responses' => [],
                     ],
@@ -233,6 +236,7 @@ if (empty($errors)) {
                 'transaction' => $transactionData['transaction'],
                 'endpoint' => $transactionData['endpoint'],
                 'redirect_url' => $transactionData['redirect_url'],
+                'num_cliente' => $transactionData['transaction']['num_cliente'] ?? '',
             ];
             $logMessage = sprintf(
                 "[%s] [Zumpago][payload] %s%s",

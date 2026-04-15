@@ -54,6 +54,7 @@ class ZumpagoRedirectService
         $date = date('Ymd');
         $time = date('His');
         $transactionId = $this->generateTransactionId($normalizedRut, $documentIds);
+        $numCliente = $this->resolveNumCliente($documentIds);
 
         $padded = $this->padFields([
             'IdComercio' => $this->companyCode,
@@ -74,6 +75,7 @@ class ZumpagoRedirectService
             'IdTransaccion' => $transactionId,
             'Fecha' => $date,
             'Hora' => $time,
+            'NumCliente' => $numCliente,
             'MontoTotal' => (string) $totalAmount,
             'MediosPago' => $this->paymentMethods,
             'CodigoVerificacion' => $verificationCode,
@@ -91,6 +93,7 @@ class ZumpagoRedirectService
                 'id' => $transactionId,
                 'date' => $date,
                 'time' => $time,
+                'num_cliente' => $numCliente,
                 'verification_code' => $verificationCode,
             ],
         ];
@@ -175,6 +178,10 @@ class ZumpagoRedirectService
         ];
 
         foreach ($elements as $tag => $value) {
+            if ($value === '') {
+                continue;
+            }
+
             $xmlParts[] = sprintf(
                 '<%1$s>%2$s</%1$s>',
                 $tag,
@@ -226,7 +233,34 @@ class ZumpagoRedirectService
 
     private function requireValue(array $config, string $key): string
     {
-        $value = trim((string) ($config[$key] ?? ''));
+        $environment = strtolower(trim((string) ($config['environment'] ?? 'production')));
+        $rawValue = $config[$key] ?? '';
+
+        if (is_array($rawValue)) {
+            $candidates = [
+                $environment,
+                $environment === 'production' ? 'prod' : null,
+                $environment === 'certification' ? 'qa' : null,
+                'production',
+                'certification',
+            ];
+
+            $resolved = '';
+            foreach ($candidates as $candidate) {
+                if ($candidate === null || !array_key_exists($candidate, $rawValue)) {
+                    continue;
+                }
+
+                $resolved = trim((string) $rawValue[$candidate]);
+                if ($resolved !== '') {
+                    break;
+                }
+            }
+
+            $value = $resolved;
+        } else {
+            $value = trim((string) $rawValue);
+        }
 
         if ($value === '') {
             throw new InvalidArgumentException(sprintf('La configuración de Zumpago requiere el parámetro "%s".', $key));
@@ -276,5 +310,40 @@ class ZumpagoRedirectService
     private function escapeXml(string $value): string
     {
         return htmlspecialchars($value, ENT_NOQUOTES, 'ISO-8859-1');
+    }
+
+    /**
+     * NumCliente es opcional. Para pagos múltiples usamos un marcador fijo
+     * acordado para no perder compatibilidad con el flujo actual.
+     *
+     * @param string[] $documentIds
+     */
+    private function resolveNumCliente(array $documentIds): string
+    {
+        $cleanIds = [];
+
+        foreach ($documentIds as $documentId) {
+            $documentId = trim((string) $documentId);
+            if ($documentId === '') {
+                continue;
+            }
+
+            $normalized = preg_replace('/[^0-9A-Za-z]/', '', $documentId) ?? '';
+            if ($normalized === '') {
+                continue;
+            }
+
+            $cleanIds[] = $normalized;
+        }
+
+        if (count($cleanIds) > 1) {
+            return 'pagoMultiple';
+        }
+
+        if (count($cleanIds) === 0) {
+            return '';
+        }
+
+        return substr($cleanIds[0], 0, 12);
     }
 }

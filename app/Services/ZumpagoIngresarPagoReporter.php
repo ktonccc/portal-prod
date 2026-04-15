@@ -129,7 +129,9 @@ class ZumpagoIngresarPagoReporter
         $medioPago = trim((string) ($parsed['MedioPagoAutorizado'] ?? ''));
         $channel = $this->resolveChannel($medioPago);
         $fechaPago = $this->formatDate($parsed['Fecha'] ?? null);
-        $fechaContable = $this->formatDate($this->extractDateFromTimestamp($parsed['FechaProcesamiento'] ?? null));
+        $fechaAbono = trim((string) ($parsed['FechaAbono'] ?? ''));
+        $fechaContableSource = $fechaAbono !== '' ? $fechaAbono : $this->extractDateFromTimestamp($parsed['FechaProcesamiento'] ?? null);
+        $fechaContable = $this->formatDate($fechaContableSource);
         $responseAmount = $this->normalizeAmount($parsed['MontoTotal'] ?? $record['amount'] ?? null);
 
         $payloads = [];
@@ -404,6 +406,7 @@ class ZumpagoIngresarPagoReporter
                     'DescripcionRespuesta',
                     'CodigoAutorizacion',
                     'Fecha',
+                    'FechaAbono',
                     'FechaProcesamiento',
                 ])
             );

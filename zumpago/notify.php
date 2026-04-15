@@ -17,10 +17,13 @@ $shouldRedirectToResponse = ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
     && isset($_GET['xml']);
 
 if ($shouldRedirectToResponse) {
-    $responseUrl = (string) config_value('zumpago.response_url', '/zumpago/response.php');
-    if (trim($responseUrl) === '') {
-        $responseUrl = '/zumpago/response.php';
-    }
+    $zumpagoConfig = (array) config_value('zumpago', []);
+    $environment = strtolower(trim((string) ($zumpagoConfig['environment'] ?? 'production')));
+    $responseUrl = resolveZumpagoCallbackUrl(
+        $zumpagoConfig['response_url'] ?? '/zumpago/response.php',
+        $environment,
+        '/zumpago/response.php'
+    );
 
     $separator = str_contains($responseUrl, '?') ? '&' : '?';
     header('Location: ' . $responseUrl . $separator . 'xml=' . urlencode((string) $_GET['xml']));
@@ -108,6 +111,40 @@ $normalizeTransactionId = static function (string $value): string {
     return $normalized !== '' ? $normalized : '0';
 };
 
+/**
+ * @param mixed $value
+ */
+function resolveZumpagoCallbackUrl($value, string $environment, string $fallback): string
+{
+    if (is_array($value)) {
+        $candidates = [
+            $environment,
+            $environment === 'production' ? 'prod' : null,
+            $environment === 'certification' ? 'qa' : null,
+            'production',
+            'certification',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === null || !array_key_exists($candidate, $value)) {
+                continue;
+            }
+
+            $resolved = trim((string) $value[$candidate]);
+            if ($resolved !== '') {
+                return $resolved;
+            }
+        }
+    }
+
+    $resolved = trim((string) $value);
+    if ($resolved !== '') {
+        return $resolved;
+    }
+
+    return $fallback;
+}
+
 if ($encryptedXmlParam !== '') {
     try {
         $config = (array) config_value('zumpago', []);
@@ -170,12 +207,16 @@ if ($encryptedXmlParam !== '') {
         );
         $responseDescription = trim((string) ($parsedResponseData['DescripcionRespuesta'] ?? ''));
         $processedAt = trim((string) ($parsedResponseData['FechaProcesamiento'] ?? ''));
+        $fechaAbono = trim((string) ($parsedResponseData['FechaAbono'] ?? ''));
+        $numCliente = trim((string) ($parsedResponseData['NumCliente'] ?? ''));
         $amountValue = trim((string) ($parsedResponseData['MontoTotal'] ?? ''));
         $responseAmount = $amountValue !== '' ? (int) preg_replace('/\D/', '', $amountValue) : null;
 
         $notifyLog['transaction_id'] = $transactionId;
         $notifyLog['code'] = $responseCode !== '' ? $responseCode : null;
         $notifyLog['description'] = $responseDescription !== '' ? $responseDescription : null;
+        $notifyLog['num_cliente'] = $numCliente !== '' ? $numCliente : null;
+        $notifyLog['fecha_abono'] = $fechaAbono !== '' ? $fechaAbono : null;
 
         $storage = new ZumpagoTransactionStorage(__DIR__ . '/../app/storage/zumpago');
         $storage->appendResponse($transactionId, [

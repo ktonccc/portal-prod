@@ -227,7 +227,35 @@ class ZumpagoResponseService
 
     private function requireValue(array $config, string $key): string
     {
-        $value = trim((string) ($config[$key] ?? ''));
+        $environment = strtolower(trim((string) ($config['environment'] ?? 'production')));
+        $rawValue = $config[$key] ?? '';
+
+        if (is_array($rawValue)) {
+            $candidates = [
+                $environment,
+                $environment === 'production' ? 'prod' : null,
+                $environment === 'certification' ? 'qa' : null,
+                'production',
+                'certification',
+            ];
+
+            $resolved = '';
+            foreach ($candidates as $candidate) {
+                if ($candidate === null || !array_key_exists($candidate, $rawValue)) {
+                    continue;
+                }
+
+                $resolved = trim((string) $rawValue[$candidate]);
+                if ($resolved !== '') {
+                    break;
+                }
+            }
+
+            $value = $resolved;
+        } else {
+            $value = trim((string) $rawValue);
+        }
+
         if ($value === '') {
             throw new InvalidArgumentException(sprintf('La configuración de Zumpago requiere el parámetro "%s".', $key));
         }
@@ -235,4 +263,3 @@ class ZumpagoResponseService
         return $value;
     }
 }
-

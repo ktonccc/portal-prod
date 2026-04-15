@@ -225,9 +225,18 @@ return [
         'default_company_id' => '765316081',
         // Configuración por defecto (WAM BP). Se mantiene para compatibilidad.
         'company_code' => '000039',
-        'xml_key' => 'Sysasap2014_Zumpago_2014',
-        'verification_key' => '1E363866FAEDC7F0CC7C694C',
-        'iv' => '12345678',
+        'xml_key' => [
+            'production' => 'Sysasap2014_Zumpago_2014',
+            'certification' => 'Sysasap2014_Zumpago_2014',
+        ],
+        'verification_key' => [
+            'production' => '1E363866FAEDC7F0CC7C694C',
+            'certification' => '501D5913B4591E81BE611E2E',
+        ],
+        'iv' => [
+            'production' => '12345678',
+            'certification' => '12345678',
+        ],
         'payment_methods' => '018,024,022,016',
         // production | certification
         'environment' => 'production',
@@ -236,17 +245,35 @@ return [
             'certification' => 'http://20.157.19.107:8091/BPZumPago/pago.aspx',
         ],
         // Rutas que debemos informar a Zumpago por ambiente.
-        'response_url' => 'https://pagos.homenet.cl/zumpago/response.php',
-        'notification_url' => 'https://pagos.homenet.cl/zumpago/notify.php',
-        'cancellation_url' => 'https://pagos.homenet.cl/zumpago/cancel.php',
+        'response_url' => [
+            'production' => 'https://pagos.homenet.cl/zumpago/response.php',
+            'certification' => 'https://pagos.homenet.cl/zumpago/response.php',
+        ],
+        'notification_url' => [
+            'production' => 'https://pagos.homenet.cl/zumpago/notify.php',
+            'certification' => 'https://pagos.homenet.cl/zumpago/notify.php',
+        ],
+        'cancellation_url' => [
+            'production' => 'https://pagos.homenet.cl/zumpago/cancel.php',
+            'certification' => 'https://pagos.homenet.cl/zumpago/cancel.php',
+        ],
         // Configuración específica por empresa (IdEmpresa).
         'companies' => [
             '765316081' => [
                 'label' => 'WAM BP',
                 'company_code' => '000039',
-                'xml_key' => 'Sysasap2014_Zumpago_2014',
-                'verification_key' => '1E363866FAEDC7F0CC7C694C',
-                'iv' => '12345678',
+                'xml_key' => [
+                    'production' => 'Sysasap2014_Zumpago_2014',
+                    'certification' => 'Sysasap2014_Zumpago_2014',
+                ],
+                'verification_key' => [
+                    'production' => '1E363866FAEDC7F0CC7C694C',
+                    'certification' => '501D5913B4591E81BE611E2E',
+                ],
+                'iv' => [
+                    'production' => '12345678',
+                    'certification' => '12345678',
+                ],
                 'payment_methods' => '018,024,022,016',
                 'urls' => [
                     'production' => 'https://www.zumpago.cl/BPZumpago/pago.aspx',

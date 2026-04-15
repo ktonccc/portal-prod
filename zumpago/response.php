@@ -154,6 +154,7 @@ if ($encryptedXmlParam !== '') {
         $responseDescription = trim((string) ($parsedResponseData['DescripcionRespuesta'] ?? ''));
         $processedAtRaw = trim((string) ($parsedResponseData['FechaProcesamiento'] ?? ''));
         $processedAt = $processedAtRaw !== '' ? $processedAtRaw : null;
+        $fechaAbono = trim((string) ($parsedResponseData['FechaAbono'] ?? ''));
         $responseAmountValue = (string) ($parsedResponseData['MontoTotal'] ?? '');
         if ($responseAmountValue !== '') {
             $responseAmount = (int) $responseAmountValue;
@@ -203,11 +204,28 @@ if ($encryptedXmlParam !== '') {
             ];
         }
 
+        $numCliente = trim((string) ($parsedResponseData['NumCliente'] ?? ''));
+        if ($numCliente !== '') {
+            $zumpagoDetails[] = [
+                'label' => 'NumCliente',
+                'value' => $numCliente,
+            ];
+        }
+
+        if ($fechaAbono !== '') {
+            $zumpagoDetails[] = [
+                'label' => 'Fecha de abono',
+                'value' => $fechaAbono,
+            ];
+        }
+
         $fieldLabels = [
             'IdComercio' => 'ID Comercio',
             'IdTransaccion' => 'ID Transacción',
             'Fecha' => 'Fecha',
             'Hora' => 'Hora',
+            'NumCliente' => 'NumCliente',
+            'FechaAbono' => 'Fecha de abono',
             'MontoTotal' => 'Monto informado',
             'MedioPagoAutorizado' => 'Medio de pago autorizado',
             'CodigoRespuesta' => 'Código de respuesta',
@@ -282,6 +300,8 @@ $debugResponseRecord['xml'] = [
 $debugResponseRecord['summary'] = [
     'code' => $responseCode,
     'description' => $responseDescription,
+    'num_cliente' => $parsedResponseData['NumCliente'] ?? null,
+    'fecha_abono' => $parsedResponseData['FechaAbono'] ?? null,
 ];
 
 $debugData['response'] = $debugResponseRecord;
