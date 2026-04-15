@@ -157,7 +157,7 @@ class WebpayIngresarPagoReporter
                 'RutCliente' => $rut,
                 'Mail' => $mail,
                 'Recaudador' => $this->collector,
-                'Canal' => $channel,
+                'Canal' => 'WEBPAY - '.$channel,
                 'FechaPago' => $fechaPago,
                 'FechaContable' => $fechaContable,
                 'Mes' => $mes,
