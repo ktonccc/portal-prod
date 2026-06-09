@@ -140,7 +140,15 @@ class ZumpagoRedirectService
             }
         }
 
+        if (count($cleanIds) > 1) {
+            return $this->generateProviderTransactionId();
+        }
+
         if (!empty($cleanIds)) {
+            if (strlen($cleanIds[0]) > 13) {
+                return $this->generateProviderTransactionId();
+            }
+
             return implode(',', $cleanIds);
         }
 
@@ -150,6 +158,16 @@ class ZumpagoRedirectService
         }
 
         return trim($normalizedRut);
+    }
+
+    private function generateProviderTransactionId(): string
+    {
+        $milliseconds = (string) ((int) floor(microtime(true) * 1000));
+        if (strlen($milliseconds) >= 13) {
+            return substr($milliseconds, -13);
+        }
+
+        return str_pad($milliseconds, 13, '0', STR_PAD_LEFT);
     }
 
     /**

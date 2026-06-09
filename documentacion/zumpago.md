@@ -18,7 +18,7 @@ La integración con Zumpago habilita un flujo de redirección donde el portal co
 - `payment_methods`: lista de medios disponibles para el comercio (ej. `016`).
 - `urls`: endpoints por ambiente (`production`, `certification`, etc.).
 - `response_url`, `notification_url`, `cancellation_url`: endpoints hosteados por HomeNet que Zumpago invoca según el resultado.
-- `IdTransaccion`: generado en `ZumpagoRedirectService::generateTransactionId` combinando RUT y timestamp (13 dígitos).
+- `IdTransaccion`: identificador enviado a Zumpago. Para un solo documento se usa el id de cliente si cabe en 13 caracteres; para pagos múltiples, o ids más largos, se genera un correlativo numérico de 13 dígitos y la relación con las deudas queda guardada localmente en `app/storage/zumpago`.
 - `CodigoVerificacion`: resultado de cifrar los campos padded con `verification_key` (garantiza integridad).
 - `xml`: payload XML ISO-8859-1 enviado a Zumpago. Claves: `IdComercio`, `IdTransaccion`, `Fecha`, `Hora`, `MontoTotal`, `MediosPago`, `CodigoVerificacion`.
 - `xml_encrypted`: versión cifrada que se agrega a la URL como parámetro `xml`.
@@ -41,7 +41,7 @@ sequenceDiagram
 ## Detalles operativos
 1. **Preparación de datos**: `pay_zumpago.php` repite la validación que compartimos con otros medios (RUT, email, deudas) y calcula `totalAmount`.
 2. **Generación del XML**:
-   - `ZumpagoRedirectService::createRedirectData` arma un arreglo base con fecha (`Ymd`), hora (`His`), ids de documentos y total.
+   - `ZumpagoRedirectService::createRedirectData` arma un arreglo base con fecha (`Ymd`), hora (`His`), un `IdTransaccion` compatible con Zumpago y total.
    - Calcula `CodigoVerificacion` cifrando los campos padded (`IdComercio`, `IdTransaccion`, `Fecha`, `Hora`, `MontoTotal`) con `verification_key`.
    - Construye el XML en ISO-8859-1 y lo cifra con `xml_key`.
    - Devuelve `redirect_url` listo para que el navegador lo cargue.
@@ -55,6 +55,7 @@ sequenceDiagram
 - Asegúrate de manejar los eventos en `zumpago/*.php` para completar el ciclo (confirmaciones, rechazos, cancelaciones).
 - `payment_methods` determina los medios permitidos; si Zumpago modifica el catálogo habrá que actualizar este valor.
 - Revisa `zumpago.log` para auditar transacciones y depurar integraciones.
+- No uses listas de ids separadas por coma como `IdTransaccion` en pagos múltiples. Zumpago valida ese campo con largo 13; la lista completa de deudas debe vivir solo en el storage local y en los logs internos.
 
 ## Datos de prueba (ambiente certificación)
 - **Tarjeta de crédito**: 4051 8856 0044 6623
